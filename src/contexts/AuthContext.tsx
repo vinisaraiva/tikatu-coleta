@@ -123,29 +123,27 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         return false;
       }
 
-      // Verificação de senha
-      console.log('Verificando senha para voluntário:', data.code);
-      
-      if (!data.password_hash || data.password_hash.trim() === '') {
-        console.log('❌ Voluntário não possui senha cadastrada');
-        return false;
-      }
+             // Verificação de senha
+       if (!data.password_hash || data.password_hash.trim() === '') {
+         console.log('❌ Voluntário não possui senha cadastrada');
+         return false;
+       }
 
-      try {
-        // Decodificar senha do banco (Base64)
-        const senhaDecodificada = atob(data.password_hash);
-        const senhaFornecida = password.trim();
-        
-        if (senhaFornecida !== senhaDecodificada) {
-          console.log('❌ Senha incorreta');
-          return false;
-        }
-        
-        console.log('✅ Senha válida');
-      } catch (error) {
-        console.error('❌ Erro ao decodificar senha:', error);
-        return false;
-      }
+       try {
+         // Decodificar senha do banco (Base64)
+         const senhaDecodificada = atob(data.password_hash);
+         const senhaFornecida = password.trim();
+         
+         if (senhaFornecida !== senhaDecodificada) {
+           console.log('❌ Senha incorreta');
+           return false;
+         }
+         
+         console.log('✅ Senha válida');
+       } catch (error) {
+         console.error('❌ Erro ao decodificar senha:', error);
+         return false;
+       }
 
       // Buscar dados do ponto separadamente
       let volunteerData = { ...data };
@@ -205,14 +203,9 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       
              // Verificar se estamos no ambiente web
        if (typeof window !== 'undefined') {
-         console.log('Ambiente web detectado');
-         console.log('Hostname:', window.location.hostname);
-         
-         // No web, sempre recarregar para garantir limpeza completa
-         console.log('Recarregando página para limpeza completa...');
-         setTimeout(() => {
-           window.location.reload();
-         }, 100);
+         console.log('Ambiente web detectado - forçando reload...');
+         // Forçar reload imediato
+         window.location.href = window.location.href;
          return;
        }
       

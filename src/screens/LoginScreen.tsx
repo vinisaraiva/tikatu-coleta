@@ -32,27 +32,17 @@ export default function LoginScreen() {
     setErrorMessage('');
     
     if (!code.trim() || !password.trim()) {
-      console.log('Campos vazios detectados');
       setErrorMessage('Por favor, preencha todos os campos');
       return;
     }
 
-    console.log('Chamando função login...');
     const success = await login(code.trim(), password);
-    console.log('Resultado do login:', success);
     
     if (!success) {
-      console.log('Login falhou, definindo mensagem de erro...');
-      // Forçar atualização do estado
-      setTimeout(() => {
-        setErrorMessage('Código ou senha incorretos');
-        console.log('Mensagem de erro definida via setTimeout');
-      }, 0);
+      setErrorMessage('Código ou senha incorretos');
       // Limpar campos apenas se o login falhar
       setCode('');
       setPassword('');
-    } else {
-      console.log('Login bem-sucedido');
     }
   };
 
@@ -107,7 +97,10 @@ export default function LoginScreen() {
             </TouchableOpacity>
             
             {errorMessage && (
-              <Text style={styles.errorText}>{errorMessage}</Text>
+              <View style={styles.errorContainer}>
+                <Text style={styles.errorTitle}>❌ Erro de Login</Text>
+                <Text style={styles.errorText}>{errorMessage}</Text>
+              </View>
             )}
           </View>
 
@@ -237,11 +230,33 @@ const styles = StyleSheet.create({
     fontStyle: 'italic',
     lineHeight: 16,
   },
+  errorContainer: {
+    backgroundColor: '#fef2f2',
+    padding: 20,
+    borderRadius: 12,
+    marginBottom: 20,
+    borderLeftWidth: 4,
+    borderLeftColor: '#dc2626',
+    shadowColor: '#000',
+    shadowOffset: {
+      width: 0,
+      height: 1,
+    },
+    shadowOpacity: 0.05,
+    shadowRadius: 2,
+    elevation: 2,
+  },
+  errorTitle: {
+    fontSize: 16,
+    fontWeight: 'bold',
+    color: '#dc2626',
+    marginBottom: 8,
+    textAlign: 'center',
+  },
   errorText: {
     color: '#dc2626',
     fontSize: 14,
     textAlign: 'center',
-    marginTop: 10,
-    paddingHorizontal: 10,
+    lineHeight: 20,
   },
 }); 
