@@ -192,22 +192,40 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
   const logout = async () => {
     try {
-      console.log('Fazendo logout...');
+      console.log('=== INICIANDO LOGOUT ===');
+      console.log('Estado atual - volunteer:', volunteer);
+      console.log('Estado atual - loading:', loading);
+      
+      // Limpar AsyncStorage
+      console.log('Removendo dados do AsyncStorage...');
       await AsyncStorage.removeItem('volunteer');
+      console.log('AsyncStorage limpo');
+      
+      // Limpar estado
+      console.log('Limpando estado...');
       setVolunteer(null);
       setLoading(false);
+      console.log('Estado limpo');
       
-      // No ambiente web, recarregar a página para garantir limpeza completa
-      if (typeof window !== 'undefined' && window.location.hostname !== 'localhost') {
-        console.log('Recarregando página para limpeza completa...');
-        window.location.reload();
-        return;
+      // Verificar se estamos no ambiente web
+      if (typeof window !== 'undefined') {
+        console.log('Ambiente web detectado');
+        console.log('Hostname:', window.location.hostname);
+        
+        if (window.location.hostname !== 'localhost') {
+          console.log('Recarregando página para limpeza completa...');
+          setTimeout(() => {
+            window.location.reload();
+          }, 100);
+          return;
+        }
       }
       
-      console.log('Logout concluído');
+      console.log('Logout concluído com sucesso');
     } catch (error) {
       console.error('Erro no logout:', error);
       // Forçar limpeza mesmo com erro
+      console.log('Forçando limpeza devido a erro...');
       setVolunteer(null);
       setLoading(false);
     }
