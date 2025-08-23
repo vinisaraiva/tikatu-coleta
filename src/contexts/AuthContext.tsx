@@ -52,6 +52,15 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const checkAuth = async () => {
     try {
       console.log('Verificando autenticação salva...');
+      
+      // No ambiente web, não restaurar sessão automaticamente
+      if (typeof window !== 'undefined' && window.location.hostname !== 'localhost') {
+        console.log('Ambiente web detectado, não restaurando sessão automaticamente');
+        setVolunteer(null);
+        setLoading(false);
+        return;
+      }
+      
       const storedVolunteer = await AsyncStorage.getItem('volunteer');
       if (storedVolunteer) {
         const parsed = JSON.parse(storedVolunteer);
@@ -187,6 +196,14 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       await AsyncStorage.removeItem('volunteer');
       setVolunteer(null);
       setLoading(false);
+      
+      // No ambiente web, recarregar a página para garantir limpeza completa
+      if (typeof window !== 'undefined' && window.location.hostname !== 'localhost') {
+        console.log('Recarregando página para limpeza completa...');
+        window.location.reload();
+        return;
+      }
+      
       console.log('Logout concluído');
     } catch (error) {
       console.error('Erro no logout:', error);
