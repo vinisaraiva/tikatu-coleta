@@ -99,7 +99,7 @@
       
       function testLoad() {
         const script = document.createElement('script');
-        script.src = './_expo/static/js/web/index-f8e77cc3198871fe5c2dee85b62bd046.js';
+        script.src = './expo/static/js/web/index-f8e77cc3198871fe5c2dee85b62bd046.js';
         script.onload = function() {
           document.getElementById('success-status').style.display = 'block';
           console.log('✅ Script carregado com sucesso!');
@@ -113,7 +113,7 @@
       }
 
       function checkFiles() {
-        fetch('./_expo/static/js/web/index-f8e77cc3198871fe5c2dee85b62bd046.js')
+        fetch('./expo/static/js/web/index-f8e77cc3198871fe5c2dee85b62bd046.js')
           .then(response => {
             if (response.ok) {
               document.getElementById('success-status').style.display = 'block';
