@@ -51,20 +51,30 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
   const checkAuth = async () => {
     try {
-      // Limpar dados de teste antigos
+      console.log('Verificando autenticação salva...');
       const storedVolunteer = await AsyncStorage.getItem('volunteer');
       if (storedVolunteer) {
         const parsed = JSON.parse(storedVolunteer);
-        // Se for dados de teste, limpar
-        if (parsed.code === 'TEST001') {
+        console.log('Dados salvos encontrados:', parsed);
+        
+        // Validar se os dados são válidos
+        if (parsed && parsed.id && parsed.code && parsed.nome) {
+          console.log('Dados válidos, restaurando sessão...');
+          setVolunteer(parsed);
+        } else {
+          console.log('Dados inválidos, limpando...');
           await AsyncStorage.removeItem('volunteer');
           setVolunteer(null);
-        } else {
-          setVolunteer(parsed);
         }
+      } else {
+        console.log('Nenhum dado salvo encontrado');
+        setVolunteer(null);
       }
     } catch (error) {
       console.error('Erro ao verificar autenticação:', error);
+      // Limpar dados corrompidos
+      await AsyncStorage.removeItem('volunteer');
+      setVolunteer(null);
     } finally {
       setLoading(false);
     }
@@ -131,8 +141,6 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         console.error('❌ Erro ao decodificar senha:', error);
         return false;
       }
-      
-      console.log('✅ Senha válida');
 
       // Buscar dados do ponto separadamente
       let volunteerData = { ...data };
@@ -175,10 +183,16 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
   const logout = async () => {
     try {
+      console.log('Fazendo logout...');
       await AsyncStorage.removeItem('volunteer');
       setVolunteer(null);
+      setLoading(false);
+      console.log('Logout concluído');
     } catch (error) {
       console.error('Erro no logout:', error);
+      // Forçar limpeza mesmo com erro
+      setVolunteer(null);
+      setLoading(false);
     }
   };
 
