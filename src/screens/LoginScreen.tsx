@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   View,
   Text,
@@ -19,6 +19,11 @@ export default function LoginScreen() {
   const [password, setPassword] = useState('');
   const [errorMessage, setErrorMessage] = useState('');
   const { login, loading } = useAuth();
+
+  // Debug: monitorar mudanças no errorMessage
+  useEffect(() => {
+    console.log('errorMessage mudou para:', errorMessage);
+  }, [errorMessage]);
 
   const handleLogin = async () => {
     console.log('=== INICIANDO LOGIN ===');
