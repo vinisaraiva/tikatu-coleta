@@ -27,8 +27,9 @@ export default function LoginScreen() {
 
   const handleLogin = async () => {
     console.log('=== INICIANDO LOGIN ===');
-    setErrorMessage(''); // Limpar erro anterior
-    console.log('Erro limpo, errorMessage:', errorMessage);
+    
+    // Limpar erro anterior
+    setErrorMessage('');
     
     if (!code.trim() || !password.trim()) {
       console.log('Campos vazios detectados');
@@ -42,8 +43,11 @@ export default function LoginScreen() {
     
     if (!success) {
       console.log('Login falhou, definindo mensagem de erro...');
-      setErrorMessage('Código ou senha incorretos');
-      console.log('Mensagem de erro definida:', 'Código ou senha incorretos');
+      // Forçar atualização do estado
+      setTimeout(() => {
+        setErrorMessage('Código ou senha incorretos');
+        console.log('Mensagem de erro definida via setTimeout');
+      }, 0);
       // Limpar campos apenas se o login falhar
       setCode('');
       setPassword('');
@@ -102,13 +106,9 @@ export default function LoginScreen() {
               )}
             </TouchableOpacity>
             
-            {errorMessage ? (
+            {errorMessage && (
               <Text style={styles.errorText}>{errorMessage}</Text>
-            ) : null}
-            {/* Debug: mostrar valor do errorMessage */}
-            <Text style={{fontSize: 10, color: 'gray', textAlign: 'center', marginTop: 5}}>
-              Debug: errorMessage = "{errorMessage}"
-            </Text>
+            )}
           </View>
 
           <View style={styles.infoContainer}>

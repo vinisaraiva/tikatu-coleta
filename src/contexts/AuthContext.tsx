@@ -136,8 +136,6 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         const senhaDecodificada = atob(data.password_hash);
         const senhaFornecida = password.trim();
         
-        console.log('Verificando senha...');
-        
         if (senhaFornecida !== senhaDecodificada) {
           console.log('❌ Senha incorreta');
           return false;
@@ -205,19 +203,18 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       setLoading(false);
       console.log('Estado limpo');
       
-      // Verificar se estamos no ambiente web
-      if (typeof window !== 'undefined') {
-        console.log('Ambiente web detectado');
-        console.log('Hostname:', window.location.hostname);
-        
-        if (window.location.hostname !== 'localhost') {
-          console.log('Recarregando página para limpeza completa...');
-          setTimeout(() => {
-            window.location.reload();
-          }, 100);
-          return;
-        }
-      }
+             // Verificar se estamos no ambiente web
+       if (typeof window !== 'undefined') {
+         console.log('Ambiente web detectado');
+         console.log('Hostname:', window.location.hostname);
+         
+         // No web, sempre recarregar para garantir limpeza completa
+         console.log('Recarregando página para limpeza completa...');
+         setTimeout(() => {
+           window.location.reload();
+         }, 100);
+         return;
+       }
       
       console.log('Logout concluído com sucesso');
     } catch (error) {
