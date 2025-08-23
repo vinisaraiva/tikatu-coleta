@@ -1,47 +1,76 @@
 import React, { useState, useEffect } from 'react';
-import { NavigationContainer } from '@react-navigation/native';
-import { createStackNavigator } from '@react-navigation/stack';
-import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
-import { StatusBar } from 'expo-status-bar';
+import { View, Text, TextInput, TouchableOpacity, StyleSheet } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import { View, Text } from 'react-native';
-
-// Note: react-native-screens was removed to fix Kotlin compilation issues
-
-// Screens
-import LoginScreen from './src/screens/LoginScreen';
-import DashboardScreen from './src/screens/DashboardScreen';
-import XLSXImportScreen from './src/screens/XLSXImportScreen';
-import EnvironmentalFactorsScreen from './src/screens/EnvironmentalFactorsScreen';
-import HistoryScreen from './src/screens/HistoryScreen';
-import ReadingDetailScreen from './src/screens/ReadingDetailScreen';
-import ProfileScreen from './src/screens/ProfileScreen';
 
 // Context
 import { AuthProvider, useAuth } from './src/contexts/AuthContext';
 
-const Stack = createStackNavigator();
-const Tab = createBottomTabNavigator();
+function SimpleLoginScreen() {
+  const [code, setCode] = useState('');
+  const [password, setPassword] = useState('');
+  const { login, loading } = useAuth();
 
-function MainTabs() {
+  const handleLogin = async () => {
+    if (!code.trim() || !password.trim()) {
+      alert('Por favor, preencha todos os campos');
+      return;
+    }
+
+    const success = await login(code.trim(), password);
+    if (!success) {
+      alert('Código ou senha incorretos');
+    }
+  };
+
   return (
-    <Tab.Navigator>
-      <Tab.Screen
-        name="Dashboard"
-        component={DashboardScreen}
-        options={{ title: 'Início' }}
+    <View style={styles.container}>
+      <Text style={styles.title}>Tikatu Coleta</Text>
+      <Text style={styles.subtitle}>Sistema de Coleta de Dados de Qualidade da Água</Text>
+      
+      <TextInput
+        style={styles.input}
+        placeholder="Código do Voluntário"
+        value={code}
+        onChangeText={setCode}
+        autoCapitalize="none"
+        autoCorrect={false}
       />
-      <Tab.Screen
-        name="History"
-        component={HistoryScreen}
-        options={{ title: 'Histórico' }}
+
+      <TextInput
+        style={styles.input}
+        placeholder="Senha"
+        value={password}
+        onChangeText={setPassword}
+        secureTextEntry
+        autoCapitalize="none"
+        autoCorrect={false}
       />
-      <Tab.Screen
-        name="Profile"
-        component={ProfileScreen}
-        options={{ title: 'Perfil' }}
-      />
-    </Tab.Navigator>
+
+      <TouchableOpacity
+        style={styles.button}
+        onPress={handleLogin}
+        disabled={loading}
+      >
+        <Text style={styles.buttonText}>
+          {loading ? 'Carregando...' : 'Entrar'}
+        </Text>
+      </TouchableOpacity>
+    </View>
+  );
+}
+
+function SimpleDashboardScreen() {
+  const { volunteer, logout } = useAuth();
+
+  return (
+    <View style={styles.container}>
+      <Text style={styles.title}>Dashboard</Text>
+      <Text style={styles.subtitle}>Bem-vindo, {volunteer?.nome}!</Text>
+      
+      <TouchableOpacity style={styles.button} onPress={logout}>
+        <Text style={styles.buttonText}>Sair</Text>
+      </TouchableOpacity>
+    </View>
   );
 }
 
@@ -50,47 +79,66 @@ function AppNavigator() {
 
   if (loading) {
     return (
-      <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center' }}>
+      <View style={styles.container}>
         <Text>Carregando...</Text>
       </View>
     );
   }
 
-  return (
-    <NavigationContainer>
-      <Stack.Navigator screenOptions={{ headerShown: false }}>
-        {!isAuthenticated ? (
-          <Stack.Screen name="Login" component={LoginScreen} />
-        ) : (
-          <>
-            <Stack.Screen name="MainTabs" component={MainTabs} />
-            <Stack.Screen
-              name="XLSXImport"
-              component={XLSXImportScreen}
-              options={{ headerShown: true, title: 'Importar XLSX' }}
-            />
-            <Stack.Screen
-              name="EnvironmentalFactors"
-              component={EnvironmentalFactorsScreen}
-              options={{ headerShown: true, title: 'Fatores Ambientais' }}
-            />
-            <Stack.Screen
-              name="ReadingDetail"
-              component={ReadingDetailScreen}
-              options={{ headerShown: true, title: 'Detalhes da Coleta' }}
-            />
-          </>
-        )}
-      </Stack.Navigator>
-    </NavigationContainer>
-  );
+  return isAuthenticated ? <SimpleDashboardScreen /> : <SimpleLoginScreen />;
 }
+
+const styles = StyleSheet.create({
+  container: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    padding: 20,
+    backgroundColor: '#f8fafc',
+  },
+  title: {
+    fontSize: 24,
+    fontWeight: 'bold',
+    marginBottom: 10,
+    color: '#333',
+  },
+  subtitle: {
+    fontSize: 16,
+    marginBottom: 30,
+    textAlign: 'center',
+    color: '#666',
+  },
+  input: {
+    width: '100%',
+    height: 50,
+    borderWidth: 1,
+    borderColor: '#ddd',
+    borderRadius: 8,
+    paddingHorizontal: 15,
+    marginBottom: 15,
+    fontSize: 16,
+    backgroundColor: '#fff',
+  },
+  button: {
+    width: '100%',
+    height: 50,
+    backgroundColor: '#0066CC',
+    borderRadius: 8,
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginTop: 10,
+  },
+  buttonText: {
+    color: '#fff',
+    fontSize: 16,
+    fontWeight: 'bold',
+  },
+});
 
 export default function App() {
   return (
     <AuthProvider>
       <AppNavigator />
-      <StatusBar style="auto" />
     </AuthProvider>
   );
 }
