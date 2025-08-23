@@ -123,27 +123,24 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         return false;
       }
 
-             // Verificação de senha
-       if (!data.password_hash || data.password_hash.trim() === '') {
-         console.log('❌ Voluntário não possui senha cadastrada');
-         return false;
-       }
+      // Verificação de senha
+      if (!data.password_hash || data.password_hash.trim() === '') {
+        console.log('Voluntário não possui senha cadastrada');
+        return false;
+      }
 
-       try {
-         // Decodificar senha do banco (Base64)
-         const senhaDecodificada = atob(data.password_hash);
-         const senhaFornecida = password.trim();
-         
-         if (senhaFornecida !== senhaDecodificada) {
-           console.log('❌ Senha incorreta');
-           return false;
-         }
-         
-         console.log('✅ Login realizado com sucesso');
-       } catch (error) {
-         console.error('❌ Erro ao decodificar senha:', error);
-         return false;
-       }
+      try {
+        // Decodificar senha do banco (Base64) e verificar
+        const senhaDecodificada = atob(data.password_hash);
+        const senhaFornecida = password.trim();
+        
+        if (senhaFornecida !== senhaDecodificada) {
+          return false;
+        }
+      } catch (error) {
+        console.error('Erro ao verificar senha:', error);
+        return false;
+      }
 
       // Buscar dados do ponto separadamente
       let volunteerData = { ...data };
@@ -186,8 +183,6 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
   const logout = async () => {
     try {
-      console.log('=== INICIANDO LOGOUT ===');
-      
       // Limpar AsyncStorage
       await AsyncStorage.removeItem('volunteer');
       
@@ -197,9 +192,21 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       
       // Verificar se estamos no ambiente web
       if (typeof window !== 'undefined') {
-        console.log('Ambiente web detectado - forçando reload...');
-        // Forçar reload mais agressivo
-        window.location.replace(window.location.href);
+        // Limpar o cache do navegador
+        if (window.caches) {
+          try {
+            const cacheNames = await caches.keys();
+            await Promise.all(
+              cacheNames.map(cacheName => caches.delete(cacheName))
+            );
+          } catch (e) {
+            console.error('Erro ao limpar cache:', e);
+          }
+        }
+        
+        // Forçar um redirecionamento completo para limpar o estado da aplicação
+        window.location.href = window.location.origin + window.location.pathname + '?logout=' + new Date().getTime();
+        window.location.reload(true); // Forçar recarregamento sem cache
         return;
       }
       
@@ -212,7 +219,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       
       // Forçar reload no web mesmo com erro
       if (typeof window !== 'undefined') {
-        window.location.replace(window.location.href);
+        window.location.href = window.location.origin + window.location.pathname + '?error=logout_failed';
       }
     }
   };

@@ -99,14 +99,12 @@ export default function LoginScreen() {
             
             {errorMessage && (
               <View style={styles.errorContainer}>
-                <Text style={styles.errorTitle}>❌ Erro de Login</Text>
-                <Text style={styles.errorText}>{errorMessage}</Text>
+                <View style={styles.errorCard}>
+                  <Text style={styles.errorTitle}>❌ Erro de Login</Text>
+                  <Text style={styles.errorText}>{errorMessage}</Text>
+                </View>
               </View>
             )}
-            {/* Debug temporário */}
-            <Text style={{fontSize: 10, color: 'red', textAlign: 'center', marginTop: 5}}>
-              Debug: errorMessage = "{errorMessage}"
-            </Text>
           </View>
 
           <View style={styles.infoContainer}>
@@ -236,32 +234,35 @@ const styles = StyleSheet.create({
     lineHeight: 16,
   },
   errorContainer: {
-    backgroundColor: '#fef2f2',
-    padding: 20,
-    borderRadius: 12,
-    marginBottom: 20,
+    width: '100%',
+    marginTop: 15,
+    marginBottom: 15,
+    paddingHorizontal: 10,
+  },
+  errorCard: {
+    width: '100%',
+    backgroundColor: '#FEE2E2',
     borderLeftWidth: 4,
-    borderLeftColor: '#dc2626',
+    borderLeftColor: '#DC2626',
+    borderRadius: 8,
+    padding: 16,
     shadowColor: '#000',
-    shadowOffset: {
-      width: 0,
-      height: 1,
-    },
-    shadowOpacity: 0.05,
-    shadowRadius: 2,
-    elevation: 2,
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
+    elevation: 3,
   },
   errorTitle: {
     fontSize: 16,
     fontWeight: 'bold',
-    color: '#dc2626',
+    color: '#B91C1C',
     marginBottom: 8,
-    textAlign: 'center',
+    textAlign: 'left',
   },
   errorText: {
-    color: '#dc2626',
+    color: '#991B1B',
     fontSize: 14,
-    textAlign: 'center',
     lineHeight: 20,
+    textAlign: 'left',
   },
 }); 
