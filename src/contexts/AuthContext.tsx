@@ -139,7 +139,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
            return false;
          }
          
-         console.log('✅ Senha válida');
+         console.log('✅ Login realizado com sucesso');
        } catch (error) {
          console.error('❌ Erro ao decodificar senha:', error);
          return false;
@@ -187,35 +187,33 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const logout = async () => {
     try {
       console.log('=== INICIANDO LOGOUT ===');
-      console.log('Estado atual - volunteer:', volunteer);
-      console.log('Estado atual - loading:', loading);
       
       // Limpar AsyncStorage
-      console.log('Removendo dados do AsyncStorage...');
       await AsyncStorage.removeItem('volunteer');
-      console.log('AsyncStorage limpo');
       
       // Limpar estado
-      console.log('Limpando estado...');
       setVolunteer(null);
       setLoading(false);
-      console.log('Estado limpo');
       
-             // Verificar se estamos no ambiente web
-       if (typeof window !== 'undefined') {
-         console.log('Ambiente web detectado - forçando reload...');
-         // Forçar reload imediato
-         window.location.href = window.location.href;
-         return;
-       }
+      // Verificar se estamos no ambiente web
+      if (typeof window !== 'undefined') {
+        console.log('Ambiente web detectado - forçando reload...');
+        // Forçar reload mais agressivo
+        window.location.replace(window.location.href);
+        return;
+      }
       
       console.log('Logout concluído com sucesso');
     } catch (error) {
       console.error('Erro no logout:', error);
       // Forçar limpeza mesmo com erro
-      console.log('Forçando limpeza devido a erro...');
       setVolunteer(null);
       setLoading(false);
+      
+      // Forçar reload no web mesmo com erro
+      if (typeof window !== 'undefined') {
+        window.location.replace(window.location.href);
+      }
     }
   };
 
