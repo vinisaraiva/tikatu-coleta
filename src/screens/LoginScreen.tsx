@@ -102,6 +102,10 @@ export default function LoginScreen() {
                 <Text style={styles.errorText}>{errorMessage}</Text>
               </View>
             )}
+            {/* Debug temporário */}
+            <Text style={{fontSize: 10, color: 'red', textAlign: 'center', marginTop: 5}}>
+              Debug: errorMessage = "{errorMessage}"
+            </Text>
           </View>
 
           <View style={styles.infoContainer}>
