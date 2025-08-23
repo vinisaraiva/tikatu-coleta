@@ -1,0 +1,13 @@
+services:
+  - type: web
+    name: tikatu-coleta-pwa
+    env: static
+    buildCommand: npm install && npx expo export
+    staticPublishPath: ./dist
+    envVars:
+      - key: NODE_ENV
+        value: production
+    routes:
+      - type: rewrite
+        source: /*
+        destination: /index.html
