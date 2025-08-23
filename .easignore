@@ -1,0 +1,79 @@
+# Dependências - serão reinstaladas no servidor
+node_modules/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+package-lock.json
+pnpm-lock.yaml
+
+# Manter arquivos de configuração importantes
+!.npmrc
+
+# Cache e builds temporários
+.expo/
+.expo-shared/
+dist/
+build/
+*.tsbuildinfo
+
+# Pastas nativas - usar configuração do app.config.js
+android/
+ios/
+
+# IDE/Editor
+.vscode/
+.idea/
+.DS_Store
+*.swp
+*.swo
+*~
+
+# Logs
+*.log
+logs/
+
+# Arquivos de teste
+coverage/
+.nyc_output/
+*.test.js
+*.test.ts
+*.spec.js
+*.spec.ts
+
+# Arquivos de desenvolvimento
+.env.local
+.env.development
+.env.test
+
+# Assets pesados desnecessários
+*.zip
+*.tar
+*.rar
+*.7z
+
+# Arquivos de documentação desnecessários
+README.md
+CHANGELOG.md
+*.md
+!GERAR-APK.md
+!ICON-SPLASH-CONFIG.md
+
+# Scripts de desenvolvimento e debug
+scripts/
+tools/
+debug-tables.js
+check-volunteer.js
+list-volunteers.js
+analyze-real-file.js
+create-simple-test-xlsx.js
+create-test-xlsx.js
+test-data.json
+supabase-test-data.sql
+test-sonda.xlsx
+ExportExcel.xlsx
+TESTE-COLETA.md
+
+# Arquivos temporários do sistema
+Thumbs.db
+ehthumbs.db
+Desktop.ini
