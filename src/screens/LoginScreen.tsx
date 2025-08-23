@@ -17,17 +17,23 @@ import { useAuth } from '../contexts/AuthContext';
 export default function LoginScreen() {
   const [code, setCode] = useState('');
   const [password, setPassword] = useState('');
+  const [errorMessage, setErrorMessage] = useState('');
   const { login, loading } = useAuth();
 
   const handleLogin = async () => {
+    setErrorMessage(''); // Limpar erro anterior
+    
     if (!code.trim() || !password.trim()) {
-      Alert.alert('Erro', 'Por favor, preencha todos os campos');
+      setErrorMessage('Por favor, preencha todos os campos');
       return;
     }
 
     const success = await login(code.trim(), password);
     if (!success) {
-      Alert.alert('Erro', 'Código ou senha incorretos');
+      setErrorMessage('Código ou senha incorretos');
+      // Limpar campos apenas se o login falhar
+      setCode('');
+      setPassword('');
     }
   };
 
@@ -80,6 +86,10 @@ export default function LoginScreen() {
                 <Text style={styles.buttonText}>Entrar</Text>
               )}
             </TouchableOpacity>
+            
+            {errorMessage ? (
+              <Text style={styles.errorText}>{errorMessage}</Text>
+            ) : null}
           </View>
 
           <View style={styles.infoContainer}>
@@ -207,5 +217,12 @@ const styles = StyleSheet.create({
     textAlign: 'center',
     fontStyle: 'italic',
     lineHeight: 16,
+  },
+  errorText: {
+    color: '#dc2626',
+    fontSize: 14,
+    textAlign: 'center',
+    marginTop: 10,
+    paddingHorizontal: 10,
   },
 }); 

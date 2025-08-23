@@ -136,9 +136,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         const senhaDecodificada = atob(data.password_hash);
         const senhaFornecida = password.trim();
         
-        console.log('Comparando senhas:');
-        console.log('  Fornecida:', `"${senhaFornecida}"`);
-        console.log('  Decodificada do banco:', `"${senhaDecodificada}"`);
+        console.log('Verificando senha...');
         
         if (senhaFornecida !== senhaDecodificada) {
           console.log('❌ Senha incorreta');
