@@ -102,6 +102,10 @@ export default function LoginScreen() {
                 <Text style={styles.errorText}>{errorMessage}</Text>
               </View>
             )}
+            {/* Debug: mostrar se errorMessage existe */}
+            <Text style={{fontSize: 10, color: 'blue', textAlign: 'center', marginTop: 5}}>
+              Debug: errorMessage existe? {errorMessage ? 'SIM' : 'NÃO'}
+            </Text>
           </View>
 
           <View style={styles.infoContainer}>
