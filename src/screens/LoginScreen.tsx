@@ -21,19 +21,29 @@ export default function LoginScreen() {
   const { login, loading } = useAuth();
 
   const handleLogin = async () => {
+    console.log('=== INICIANDO LOGIN ===');
     setErrorMessage(''); // Limpar erro anterior
+    console.log('Erro limpo, errorMessage:', errorMessage);
     
     if (!code.trim() || !password.trim()) {
+      console.log('Campos vazios detectados');
       setErrorMessage('Por favor, preencha todos os campos');
       return;
     }
 
+    console.log('Chamando função login...');
     const success = await login(code.trim(), password);
+    console.log('Resultado do login:', success);
+    
     if (!success) {
+      console.log('Login falhou, definindo mensagem de erro...');
       setErrorMessage('Código ou senha incorretos');
+      console.log('Mensagem de erro definida:', 'Código ou senha incorretos');
       // Limpar campos apenas se o login falhar
       setCode('');
       setPassword('');
+    } else {
+      console.log('Login bem-sucedido');
     }
   };
 
@@ -90,6 +100,10 @@ export default function LoginScreen() {
             {errorMessage ? (
               <Text style={styles.errorText}>{errorMessage}</Text>
             ) : null}
+            {/* Debug: mostrar valor do errorMessage */}
+            <Text style={{fontSize: 10, color: 'gray', textAlign: 'center', marginTop: 5}}>
+              Debug: errorMessage = "{errorMessage}"
+            </Text>
           </View>
 
           <View style={styles.infoContainer}>
