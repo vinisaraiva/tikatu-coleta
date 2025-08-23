@@ -40,6 +40,12 @@
     </noscript>
     <!-- The root element for your Expo app. -->
     <div id="root"></div>
-    <script src="./expo/static/js/web/index-4b75dbf39b576b73a998735196ee0286.js?v=5" defer></script>
+    <script>
+      console.log('Loading Tikatu Coleta PWA...');
+      window.addEventListener('error', function(e) {
+        console.error('Script error:', e.error);
+      });
+    </script>
+    <script src="./expo/static/js/web/index-4b75dbf39b576b73a998735196ee0286.js?v=6" defer></script>
   </body>
 </html>
