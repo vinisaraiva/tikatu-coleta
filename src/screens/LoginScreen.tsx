@@ -28,17 +28,18 @@ export default function LoginScreen() {
   const handleLogin = async () => {
     console.log('=== INICIANDO LOGIN ===');
     
-    // Limpar erro anterior
-    setErrorMessage('');
-    
     if (!code.trim() || !password.trim()) {
       setErrorMessage('Por favor, preencha todos os campos');
       return;
     }
 
+    // Limpar erro anterior apenas se os campos estiverem preenchidos
+    setErrorMessage('');
+    
     const success = await login(code.trim(), password);
     
     if (!success) {
+      console.log('Login falhou, definindo mensagem de erro...');
       setErrorMessage('Código ou senha incorretos');
       // Limpar campos apenas se o login falhar
       setCode('');
