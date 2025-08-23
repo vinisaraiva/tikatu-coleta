@@ -24,8 +24,14 @@
       }
     </style>
   <meta name="theme-color" content="#0066CC">
-<meta name="description" content="Sistema de Coleta de Dados de Qualidade da Água">
-<link rel="icon" href="/favicon.ico" /></head>
+  <meta name="description" content="Sistema de Coleta de Dados de Qualidade da Água">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="default">
+  <meta name="apple-mobile-web-app-title" content="Tikatu Coleta">
+  <link rel="icon" href="./favicon.ico" />
+  <link rel="apple-touch-icon" href="./favicon.ico" />
+  <link rel="manifest" href="./manifest.json" />
+</head>
 
   <body>
     <!-- Use static rendering with Expo Router to support running without JavaScript. -->
@@ -34,6 +40,12 @@
     </noscript>
     <!-- The root element for your Expo app. -->
     <div id="root"></div>
-  <script src="/_expo/static/js/web/index-f8e77cc3198871fe5c2dee85b62bd046.js" defer></script>
+  <script>
+    console.log('Loading Tikatu Coleta PWA...');
+    window.addEventListener('error', function(e) {
+      console.error('Script error:', e.error);
+    });
+  </script>
+  <script src="./_expo/static/js/web/index-f8e77cc3198871fe5c2dee85b62bd046.js" defer></script>
 </body>
 </html>

@@ -1,0 +1,17 @@
+{
+  "name": "Tikatu Coleta",
+  "short_name": "Tikatu",
+  "description": "Sistema de Coleta de Dados de Qualidade da Água",
+  "start_url": "./",
+  "display": "standalone",
+  "background_color": "#f8fafc",
+  "theme_color": "#0066CC",
+  "orientation": "portrait",
+  "icons": [
+    {
+      "src": "./favicon.ico",
+      "sizes": "any",
+      "type": "image/x-icon"
+    }
+  ]
+}
