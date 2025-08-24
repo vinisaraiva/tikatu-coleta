@@ -50,6 +50,11 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const [loading, setLoading] = useState(true);
   const [errorMessage, setErrorMessage] = useState('');
 
+  // Debug: Monitorar mudanças no errorMessage
+  useEffect(() => {
+    console.log('errorMessage mudou para:', errorMessage);
+  }, [errorMessage]);
+
   useEffect(() => {
     // Flag para controle de montagem do componente
     let isMounted = true;
@@ -284,7 +289,9 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         
         if (senhaLimpa !== senhaDecodificada) {
           console.log('Senha incorreta para o voluntário:', data.id);
+          console.log('Login falhou, definindo mensagem de erro...');
           setErrorMessage('Código ou senha incorretos');
+          console.log('Mensagem de erro definida como: Código ou senha incorretos');
           return false;
         }
         

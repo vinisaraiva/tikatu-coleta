@@ -17,33 +17,31 @@ import { useAuth } from '../contexts/AuthContext';
 export default function LoginScreen() {
   const [code, setCode] = useState('');
   const [password, setPassword] = useState('');
-  const [errorMessage, setErrorMessage] = useState('');
-  const { login, loading } = useAuth();
-
-  // Debug: monitorar mudanças no errorMessage
+  const { login, loading, errorMessage } = useAuth();
+  
+  // Limpar mensagens de erro ao desmontar o componente
   useEffect(() => {
-    console.log('errorMessage mudou para:', errorMessage);
-  }, [errorMessage]);
+    return () => {
+      // A limpeza do erro será feita no próprio contexto quando necessário
+    };
+  }, []);
 
   const handleLogin = async () => {
-    console.log('=== INICIANDO LOGIN ===');
-    
+    // Validação básica dos campos
     if (!code.trim() || !password.trim()) {
-      setErrorMessage('Por favor, preencha todos os campos');
-      return;
+      return; // A mensagem de erro será definida pelo contexto
     }
-
-    // Limpar erro anterior apenas se os campos estiverem preenchidos
-    setErrorMessage('');
     
+    // Chamar a função de login do contexto
     const success = await login(code.trim(), password);
     
+    // Se o login falhar, aguardar um pouco antes de limpar os campos
+    // para garantir que a mensagem de erro seja exibida primeiro
     if (!success) {
-      console.log('Login falhou, definindo mensagem de erro...');
-      setErrorMessage('Código ou senha incorretos');
-      // Limpar campos apenas se o login falhar
-      setCode('');
-      setPassword('');
+      setTimeout(() => {
+        setCode('');
+        setPassword('');
+      }, 100); // Delay de 100ms para permitir que a mensagem de erro apareça
     }
   };
 
@@ -97,14 +95,15 @@ export default function LoginScreen() {
               )}
             </TouchableOpacity>
             
-            {errorMessage && (
+            {errorMessage ? (
               <View style={styles.errorContainer}>
                 <View style={styles.errorCard}>
-                  <Text style={styles.errorTitle}>❌ Erro de Login</Text>
-                  <Text style={styles.errorText}>{errorMessage}</Text>
+                  <Text style={styles.errorText}>
+                    {errorMessage}
+                  </Text>
                 </View>
               </View>
-            )}
+            ) : null}
           </View>
 
           <View style={styles.infoContainer}>
@@ -254,15 +253,11 @@ const styles = StyleSheet.create({
   },
   errorTitle: {
     fontSize: 16,
-    fontWeight: 'bold',
-    color: '#B91C1C',
-    marginBottom: 8,
-    textAlign: 'left',
   },
   errorText: {
-    color: '#991B1B',
-    fontSize: 14,
+    color: '#b91c1c',
+    fontSize: 15,
+    textAlign: 'center',
     lineHeight: 20,
-    textAlign: 'left',
   },
 }); 
