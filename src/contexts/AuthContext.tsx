@@ -50,10 +50,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const [loading, setLoading] = useState(true);
   const [errorMessage, setErrorMessage] = useState('');
 
-  // Debug: Monitorar mudanças no errorMessage
-  useEffect(() => {
-    console.log('errorMessage mudou para:', errorMessage);
-  }, [errorMessage]);
+
 
   useEffect(() => {
     // Flag para controle de montagem do componente
@@ -268,10 +265,10 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       }
       
       // 3. Verificação de senha
-      console.log('Verificando senha...');
+      console.log('Verificando credenciais...');
       try {
         if (!data.password_hash?.trim()) {
-          console.warn(`Voluntário ${data.id} sem senha cadastrada`);
+          console.warn(`Voluntário ${data.id} sem credenciais cadastradas`);
           setErrorMessage('Credenciais inválidas');
           return false;
         }
@@ -280,22 +277,19 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         let senhaDecodificada;
         try {
           senhaDecodificada = atob(data.password_hash);
-          console.log('Senha decodificada com sucesso');
         } catch (decodeError) {
-          console.error('Erro ao decodificar a senha:', decodeError);
+          console.error('Erro ao processar credenciais');
           setErrorMessage('Erro ao processar as credenciais');
           return false;
         }
         
         if (senhaLimpa !== senhaDecodificada) {
-          console.log('Senha incorreta para o voluntário:', data.id);
-          console.log('Login falhou, definindo mensagem de erro...');
+          console.log('Credenciais incorretas para o voluntário:', data.id);
           setErrorMessage('Código ou senha incorretos');
-          console.log('Mensagem de erro definida como: Código ou senha incorretos');
           return false;
         }
         
-        console.log('Senha válida, buscando dados adicionais...');
+        console.log('Credenciais válidas, buscando dados adicionais...');
       } catch (error) {
         console.error('Erro ao verificar senha:', error);
         setErrorMessage('Ocorreu um erro ao validar suas credenciais');
@@ -348,7 +342,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
             }
           };
           
-          console.log('Dados do ponto carregados:', volunteerData.point);
+          console.log('Dados do ponto carregados com sucesso');
         } else {
           // Se não houver point_id, definir valores padrão
           volunteerData.point = {
@@ -385,8 +379,6 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
             }
           }
         };
-        
-        console.log('Dados formatados do voluntário:', formattedData);
         
         // 4. Salvar no AsyncStorage
         try {
