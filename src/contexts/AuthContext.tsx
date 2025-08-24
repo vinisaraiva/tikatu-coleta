@@ -50,7 +50,10 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const [loading, setLoading] = useState(true);
   const [errorMessage, setErrorMessage] = useState('');
 
-
+  // Debug: Monitorar mudanças no errorMessage
+  useEffect(() => {
+    console.log('errorMessage mudou para:', errorMessage);
+  }, [errorMessage]);
 
   useEffect(() => {
     // Flag para controle de montagem do componente
@@ -265,10 +268,10 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       }
       
       // 3. Verificação de senha
-      console.log('Verificando credenciais...');
+      console.log('Verificando senha...');
       try {
         if (!data.password_hash?.trim()) {
-          console.warn(`Voluntário ${data.id} sem credenciais cadastradas`);
+          console.warn(`Voluntário ${data.id} sem senha cadastrada`);
           setErrorMessage('Credenciais inválidas');
           return false;
         }
@@ -277,19 +280,22 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         let senhaDecodificada;
         try {
           senhaDecodificada = atob(data.password_hash);
+          console.log('Senha decodificada com sucesso');
         } catch (decodeError) {
-          console.error('Erro ao processar credenciais');
+          console.error('Erro ao decodificar a senha:', decodeError);
           setErrorMessage('Erro ao processar as credenciais');
           return false;
         }
         
         if (senhaLimpa !== senhaDecodificada) {
-          console.log('Credenciais incorretas para o voluntário:', data.id);
+          console.log('Senha incorreta para o voluntário:', data.id);
+          console.log('Login falhou, definindo mensagem de erro...');
           setErrorMessage('Código ou senha incorretos');
+          console.log('Mensagem de erro definida como: Código ou senha incorretos');
           return false;
         }
         
-        console.log('Credenciais válidas, buscando dados adicionais...');
+        console.log('Senha válida, buscando dados adicionais...');
       } catch (error) {
         console.error('Erro ao verificar senha:', error);
         setErrorMessage('Ocorreu um erro ao validar suas credenciais');
@@ -342,7 +348,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
             }
           };
           
-          console.log('Dados do ponto carregados com sucesso');
+          console.log('Dados do ponto carregados:', volunteerData.point);
         } else {
           // Se não houver point_id, definir valores padrão
           volunteerData.point = {
@@ -379,6 +385,8 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
             }
           }
         };
+        
+        console.log('Dados formatados do voluntário:', formattedData);
         
         // 4. Salvar no AsyncStorage
         try {
@@ -463,117 +471,31 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   };
 
   const logout = async (options: { forceReload: boolean } = { forceReload: true }) => {
-    console.log('Iniciando processo de logout...', { forceReload: options.forceReload });
-    
-    // 0. Limpar estado imediatamente para feedback visual
-    setVolunteer(null);
-    setErrorMessage('');
-    setLoading(true);
+    console.log('Iniciando logout...');
     
     try {
-      // 1. Lista de tarefas de limpeza a serem executadas em paralelo
-      const cleanupTasks = [
-        // Limpar sessão do Supabase
-        (async () => {
-          try {
-            console.log('Limpando sessão do Supabase...');
-            await clearSupabaseSession();
-            console.log('Sessão do Supabase limpa com sucesso');
-          } catch (e) {
-            console.error('Erro ao limpar sessão do Supabase:', e);
-            throw e; // Relançar para ser capturado pelo bloco catch externo
-          }
-        })(),
-        
-        // Limpar todos os dados de armazenamento local
-        (async () => {
-          try {
-            console.log('Limpando AsyncStorage...');
-            await AsyncStorage.multiRemove([
-              'volunteer',
-              'supabase.auth.token',
-              'supabase.auth.admin',
-              'supabase.auth.user',
-              'supabase.auth.token.expires_at',
-              'supabase.auth.token.expires_in',
-              'supabase.auth.token.refresh_token'
-            ]);
-            console.log('AsyncStorage limpo com sucesso');
-          } catch (e) {
-            console.warn('Erro ao limpar AsyncStorage:', e);
-            // Não relançar, pois queremos continuar mesmo com falha
-          }
-        })()
-      ];
+      setLoading(true);
       
-      // 2. Executar todas as tarefas de limpeza em paralelo
-      console.log('Executando tarefas de limpeza...');
-      await Promise.allSettled(cleanupTasks);
+      // 1. Limpar sessão do Supabase
+      console.log('Limpando sessão do Supabase...');
+      await clearSupabaseSession();
       
-      // 3. Limpar caches e service workers (apenas no navegador)
-      if (typeof window !== 'undefined') {
-        try {
-          // 3.1 Limpar caches da API
-          if ('caches' in window) {
-            console.log('Limpando caches da API...');
-            const cacheNames = await caches.keys();
-            const cacheDeletions = cacheNames.map(cacheName => {
-              console.log(`Removendo cache: ${cacheName}`);
-              return caches.delete(cacheName);
-            });
-            await Promise.all(cacheDeletions);
-          }
-          
-          // 3.2 Limpar armazenamento do navegador
-          console.log('Limpando armazenamento do navegador...');
-          try {
-            sessionStorage.clear();
-            localStorage.clear();
-          } catch (e) {
-            console.warn('Não foi possível limpar o armazenamento do navegador:', e);
-          }
-          
-          // 3.3 Desregistrar service workers
-          if ('serviceWorker' in navigator) {
-            try {
-              console.log('Desregistrando service workers...');
-              const registrations = await navigator.serviceWorker.getRegistrations();
-              await Promise.all(registrations.map(reg => {
-                console.log(`Desregistrando service worker: ${reg.scope}`);
-                return reg.unregister();
-              }));
-            } catch (e) {
-              console.warn('Não foi possível desregistrar service workers:', e);
-            }
-          }
-          
-          // 3.4 Redirecionar para a página inicial se necessário
-          if (options.forceReload) {
-            const redirectUrl = new URL(window.location.origin + window.location.pathname);
-            redirectUrl.searchParams.set('logout', Date.now().toString());
-            redirectUrl.searchParams.set('no-cache', '1');
-            
-            console.log(`Redirecionando para: ${redirectUrl.toString()}`);
-            
-            // Tenta substituir a URL atual sem adicionar ao histórico
-            try {
-              window.location.replace(redirectUrl.toString());
-              
-              // Se o replace não redirecionar, força um reload após um curto atraso
-              setTimeout(() => {
-                window.location.href = redirectUrl.toString();
-              }, 500);
-            } catch (e) {
-              console.error('Erro ao redirecionar:', e);
-              window.location.href = redirectUrl.toString();
-            }
-          }
-          
-        } catch (e) {
-          console.error('Erro durante a limpeza do navegador:', e);
-          // Mesmo com erro, tenta continuar
-        }
-      }
+      // 2. Limpar dados do AsyncStorage
+      console.log('Limpando AsyncStorage...');
+      await AsyncStorage.multiRemove([
+        'volunteer',
+        'supabase.auth.token',
+        'supabase.auth.admin',
+        'supabase.auth.user',
+        'supabase.auth.token.expires_at',
+        'supabase.auth.token.expires_in',
+        'supabase.auth.token.refresh_token'
+      ]);
+      
+      // 3. Limpar estado do contexto
+      setVolunteer(null);
+      setErrorMessage('');
+      
       
       console.log('Logout concluído com sucesso');
       return true;
@@ -581,29 +503,17 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     } catch (error) {
       console.error('Erro durante o logout:', error);
       
-      // Em caso de erro, garantir que o estado seja limpo
+      // Mesmo com erro, limpar estado local
       setVolunteer(null);
-      
-      // Forçar recarregamento no navegador se necessário
-      if (typeof window !== 'undefined' && options.forceReload) {
-        try {
-          const url = new URL(window.location.origin + window.location.pathname);
-          url.searchParams.set('error', 'logout_failed');
-          url.searchParams.set('t', Date.now().toString());
-          window.location.href = url.toString();
-        } catch (e) {
-          console.error('Erro ao redirecionar após falha no logout:', e);
-          window.location.reload();
-        }
-      }
+      setErrorMessage('');
       
       return false;
       
     } finally {
-      // Garantir que o loading seja desativado
       setLoading(false);
     }
   };
+
 
   const value: AuthContextType = {
     volunteer,
@@ -619,4 +529,8 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       {children}
     </AuthContext.Provider>
   );
-}; 
+};
+
+export { AuthContext };
+export type { Volunteer, AuthContextType };
+
