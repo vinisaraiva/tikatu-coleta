@@ -8,6 +8,7 @@ import {
   Alert,
   ActivityIndicator,
 } from 'react-native';
+import { Platform } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
 import * as DocumentPicker from 'expo-document-picker';
 import * as FileSystem from 'expo-file-system';
@@ -63,6 +64,16 @@ export default function XLSXImportScreen() {
   const [currentRowIndex, setCurrentRowIndex] = useState(0);
   const [readyToSync, setReadyToSync] = useState(false);
 
+  const isWeb = Platform.OS === 'web';
+
+  const showAlert = (title: string, message: string) => {
+    if (isWeb && typeof window !== 'undefined') {
+      try { window.alert(`${title}\n\n${message}`); } catch {}
+      return;
+    }
+    Alert.alert(title, message);
+  };
+
   const expectedHeaders = [
     'ID', 'Model Name', 'Date', 'EC', 'EC(Unit)', 'TDS', 'TDS(Unit)', 
     'SALT(%)', 'SALT(TDS)', 'SALT(TDS)(Unit)', 'SALT(S.G.)', 'pH', 
@@ -95,10 +106,10 @@ export default function XLSXImportScreen() {
       setSelectedFile(result);
       setReadyToSync(false);
       setCurrentRowIndex(0);
-      Alert.alert('Arquivo Selecionado', 'Arquivo XLSX selecionado com sucesso!');
+      showAlert('Arquivo Selecionado', 'Arquivo XLSX selecionado com sucesso!');
     } catch (error) {
       console.error('Erro ao selecionar arquivo:', error);
-      Alert.alert('Erro', 'Erro ao selecionar arquivo');
+      showAlert('Erro', 'Erro ao selecionar arquivo');
     }
   };
 
@@ -133,7 +144,7 @@ export default function XLSXImportScreen() {
 
   const processXLSXFile = async () => {
     if (!selectedFile || selectedFile.canceled) {
-      Alert.alert('Erro', 'Nenhum arquivo selecionado');
+      showAlert('Erro', 'Nenhum arquivo selecionado');
       return;
     }
 
@@ -145,15 +156,23 @@ export default function XLSXImportScreen() {
       // Ler arquivo
       const fileUri = selectedFile.assets[0].uri;
       console.log('URI do arquivo:', fileUri);
-      
-      const fileContent = await FileSystem.readAsStringAsync(fileUri, {
-        encoding: FileSystem.EncodingType.Base64,
-      });
 
-      console.log('Arquivo lido, tamanho:', fileContent.length);
-
-      // Parse XLSX
-      const workbook = XLSX.read(fileContent, { type: 'base64' });
+      let workbook: XLSX.WorkBook;
+      if (isWeb) {
+        // No web, usar fetch + ArrayBuffer
+        const response = await fetch(fileUri);
+        const blob = await response.blob();
+        const buffer = await blob.arrayBuffer();
+        console.log('Arquivo lido (web), tamanho (bytes):', buffer.byteLength);
+        workbook = XLSX.read(buffer, { type: 'array' });
+      } else {
+        const fileContent = await FileSystem.readAsStringAsync(fileUri, {
+          encoding: FileSystem.EncodingType.Base64,
+        });
+        console.log('Arquivo lido, tamanho (base64 len):', fileContent.length);
+        // Parse XLSX
+        workbook = XLSX.read(fileContent, { type: 'base64' });
+      }
       console.log('Workbook criado, sheets:', workbook.SheetNames);
       
       const worksheet = workbook.Sheets[workbook.SheetNames[0]];
@@ -166,7 +185,7 @@ export default function XLSXImportScreen() {
       }
 
       if (data.length === 0) {
-        Alert.alert('Erro', 'Arquivo não contém dados válidos');
+        showAlert('Erro', 'Arquivo não contém dados válidos');
         return;
       }
 
@@ -175,7 +194,7 @@ export default function XLSXImportScreen() {
       console.log('Validando cabeçalhos...');
       
       if (!validateHeaders(headers)) {
-        Alert.alert('Erro', 'Formato do arquivo inválido. Verifique se é um arquivo da sonda de coleta.');
+        showAlert('Erro', 'Formato do arquivo inválido. Verifique se é um arquivo da sonda de coleta.');
         return;
       }
 
@@ -237,9 +256,14 @@ export default function XLSXImportScreen() {
       // Usar setTimeout para garantir que o estado foi limpo
       setTimeout(() => {
         setProcessedData(processedRows);
-        
+
+        if (isWeb) {
+          // No web, seguir direto para fatores ambientais da primeira linha
+          startEnvironmentalFactors(processedRows[0], 0);
+          return;
+        }
+
         if (processedRows.length === 1) {
-          // Se só tem uma linha, usar o fluxo antigo
           Alert.alert(
             'Arquivo Processado',
             `Encontrada ${processedRows.length} coleta válida. Agora responda os fatores ambientais.`,
@@ -249,7 +273,6 @@ export default function XLSXImportScreen() {
             ]
           );
         } else {
-          // Se tem múltiplas linhas, começar com a primeira
           Alert.alert(
             'Arquivo Processado',
             `Encontradas ${processedRows.length} coletas válidas. Você responderá os fatores ambientais para cada coleta individualmente.`,
@@ -263,7 +286,7 @@ export default function XLSXImportScreen() {
 
     } catch (error) {
       console.error('Erro ao processar arquivo:', error);
-      Alert.alert('Erro', 'Erro ao processar arquivo XLSX');
+      showAlert('Erro', 'Erro ao processar arquivo XLSX');
     } finally {
       setProcessing(false);
     }
