@@ -537,9 +537,10 @@ export default function XLSXImportScreen() {
       behavior={Platform.OS === 'ios' ? 'padding' : undefined}
     >
       <ScrollView
-        style={styles.container}
+        style={styles.scroll}
         contentContainerStyle={styles.scrollContent}
         keyboardShouldPersistTaps="handled"
+        scrollEnabled
       >
         <View style={styles.header}>
         <Text style={styles.title}>Importar Dados da Sonda</Text>
@@ -670,7 +671,10 @@ const styles = StyleSheet.create({
   },
   scrollContent: {
     flexGrow: 1,
-    paddingBottom: 40,
+    paddingBottom: 80,
+  },
+  scroll: {
+    flex: 1,
   },
   header: {
     backgroundColor: '#0066CC',
