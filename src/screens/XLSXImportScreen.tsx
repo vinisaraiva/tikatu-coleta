@@ -510,12 +510,14 @@ export default function XLSXImportScreen() {
 
       if (isWeb) {
         showWebToast(`Sincronização concluída: ${processedData.length} coletas enviadas e arquivo salvo no storage.`);
+        // Garantir render do toast antes de navegar
+        await new Promise(res => setTimeout(res, 50));
         // Limpar estado e voltar
         setSelectedFile(null);
         setProcessedData([]);
         setCurrentRowIndex(0);
         setReadyToSync(false);
-        setTimeout(() => navigation.goBack(), 800);
+        setTimeout(() => navigation.goBack(), 1200);
       } else {
         Alert.alert(
           'Sincronização Concluída',
@@ -550,7 +552,7 @@ export default function XLSXImportScreen() {
 
   if (isWeb) {
     return (
-      <>
+      <View style={styles.webRoot}>
       <ScrollView style={styles.webScroll} contentContainerStyle={styles.scrollContent} keyboardShouldPersistTaps="handled">
         <View style={styles.header}>
         <Text style={styles.title}>Importar Dados da Sonda</Text>
@@ -675,7 +677,7 @@ export default function XLSXImportScreen() {
           <Text style={styles.webToastText}>{webToast.text}</Text>
         </View>
       )}
-      </>
+      </View>
     );
   }
 
@@ -825,11 +827,16 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   webScroll: {
-    height: '100vh',
+    flex: 1,
+    minHeight: 0,
+    backgroundColor: '#f5f5f5',
+  },
+  webRoot: {
+    flex: 1,
     backgroundColor: '#f5f5f5',
   },
   webToast: {
-    position: 'fixed',
+    position: 'absolute',
     left: '5%',
     right: '5%',
     bottom: 20,
