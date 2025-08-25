@@ -420,12 +420,22 @@ export default function XLSXImportScreen() {
 
       // Modificar o arquivo XLSX original com todos os fatores ambientais
       const fileUri = selectedFile.assets![0].uri;
-      const fileContent = await FileSystem.readAsStringAsync(fileUri, {
-        encoding: FileSystem.EncodingType.Base64,
-      });
 
-      // Ler o workbook original
-      const workbook = XLSX.read(fileContent, { type: 'base64' });
+      let workbook: XLSX.WorkBook;
+      if (isWeb) {
+        // Web: ler via fetch + ArrayBuffer
+        const response = await fetch(fileUri);
+        const blob = await response.blob();
+        const buffer = await blob.arrayBuffer();
+        workbook = XLSX.read(buffer, { type: 'array' });
+      } else {
+        // Nativo: ler via FileSystem em base64
+        const fileContent = await FileSystem.readAsStringAsync(fileUri, {
+          encoding: FileSystem.EncodingType.Base64,
+        });
+        // Ler o workbook original
+        workbook = XLSX.read(fileContent, { type: 'base64' });
+      }
       const worksheetName = workbook.SheetNames[0];
       const worksheet = workbook.Sheets[worksheetName];
       
@@ -478,14 +488,16 @@ export default function XLSXImportScreen() {
 
       console.log('Arquivo enviado para storage com sucesso:', uploadResult.filePath);
 
-      // Excluir arquivo local após upload bem-sucedido
-      try {
-        const fileUri = selectedFile.assets![0].uri;
-        await FileSystem.deleteAsync(fileUri);
-        console.log('Arquivo local excluído com sucesso');
-      } catch (deleteError) {
-        console.warn('Erro ao excluir arquivo local:', deleteError);
-        // Não falhar a sincronização por erro na exclusão
+      // Excluir arquivo local após upload bem-sucedido (apenas nativo)
+      if (!isWeb) {
+        try {
+          const fileUri = selectedFile.assets![0].uri;
+          await FileSystem.deleteAsync(fileUri);
+          console.log('Arquivo local excluído com sucesso');
+        } catch (deleteError) {
+          console.warn('Erro ao excluir arquivo local:', deleteError);
+          // Não falhar a sincronização por erro na exclusão
+        }
       }
 
       Alert.alert(
