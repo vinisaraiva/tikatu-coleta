@@ -501,23 +501,35 @@ export default function XLSXImportScreen() {
         }
       }
 
-      Alert.alert(
-        'Sincronização Concluída',
-        `${processedData.length} coletas foram sincronizadas com o Supabase e o arquivo XLSX modificado foi enviado para o storage com sucesso!`,
-        [
-          {
-            text: 'OK',
-            onPress: () => {
-              // Limpar estado
-              setSelectedFile(null);
-              setProcessedData([]);
-              setCurrentRowIndex(0);
-              setReadyToSync(false);
-              navigation.goBack();
+      if (isWeb) {
+        try {
+          window.alert(`Sincronização Concluída\n\n${processedData.length} coletas foram sincronizadas com o Supabase e o arquivo XLSX modificado foi enviado para o storage com sucesso!`);
+        } catch {}
+        // Limpar estado e voltar
+        setSelectedFile(null);
+        setProcessedData([]);
+        setCurrentRowIndex(0);
+        setReadyToSync(false);
+        navigation.goBack();
+      } else {
+        Alert.alert(
+          'Sincronização Concluída',
+          `${processedData.length} coletas foram sincronizadas com o Supabase e o arquivo XLSX modificado foi enviado para o storage com sucesso!`,
+          [
+            {
+              text: 'OK',
+              onPress: () => {
+                // Limpar estado
+                setSelectedFile(null);
+                setProcessedData([]);
+                setCurrentRowIndex(0);
+                setReadyToSync(false);
+                navigation.goBack();
+              },
             },
-          },
-        ]
-      );
+          ]
+        );
+      }
 
     } catch (error) {
       console.error('Erro na sincronização:', error);
