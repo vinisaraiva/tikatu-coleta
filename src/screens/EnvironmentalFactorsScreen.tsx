@@ -181,6 +181,78 @@ export default function EnvironmentalFactorsScreen() {
     </View>
   );
 
+  if (Platform.OS === 'web') {
+    return (
+      <ScrollView style={styles.container}>
+        <View style={styles.header}>
+          <Text style={styles.title}>Fatores Ambientais</Text>
+          <Text style={styles.subtitle}>
+            Responda as perguntas baseadas na sua observação do local
+          </Text>
+          {measuredAt && (
+            <Text style={styles.dateText}>
+              Data/Hora: {new Date(measuredAt).toLocaleString('pt-BR')}
+            </Text>
+          )}
+          {totalRows > 1 && (
+            <View style={styles.progressContainer}>
+              <Text style={styles.progressText}>
+                Coleta {currentRow} de {totalRows}
+              </Text>
+              <View style={styles.progressBar}>
+                <View 
+                  style={[
+                    styles.progressFill, 
+                    { width: `${(currentRow / totalRows) * 100}%` }
+                  ]} 
+                />
+              </View>
+            </View>
+          )}
+        </View>
+
+        <View style={styles.content}>
+          {questions.map((question, index) => (
+            <QuestionCard key={index} question={question} questionKey={question.key} />
+          ))}
+
+          <View style={styles.observationsContainer}>
+            <Text style={styles.observationsLabel}>Observações Adicionais (Opcional)</Text>
+            <Text style={styles.observationsDescription}>
+              Adicione qualquer observação relevante sobre o local
+            </Text>
+            <TextInput
+              style={styles.observationsInput}
+              placeholder="Digite suas observações..."
+              value={factors.observacoes}
+              onChangeText={(text) => setFactors(prev => ({ ...prev, observacoes: text }))}
+              multiline
+              numberOfLines={3}
+              textAlignVertical="top"
+            />
+          </View>
+
+          <TouchableOpacity
+            style={[
+              styles.submitButton,
+              !isFormComplete() && styles.submitButtonDisabled,
+            ]}
+            onPress={handleSubmit}
+            disabled={!isFormComplete() || loading}
+          >
+            {loading ? (
+              <ActivityIndicator color="#fff" />
+            ) : (
+              <Text style={styles.submitButtonText}>
+                Confirmar Respostas
+              </Text>
+            )}
+          </TouchableOpacity>
+        </View>
+      </ScrollView>
+    );
+  }
+
   return (
     <KeyboardAvoidingView
       style={styles.container}

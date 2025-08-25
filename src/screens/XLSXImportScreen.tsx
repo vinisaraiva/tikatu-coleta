@@ -531,6 +531,130 @@ export default function XLSXImportScreen() {
   const completedRows = processedData.filter(row => row.environmentalFactors).length;
   const totalRows = processedData.length;
 
+  if (isWeb) {
+    return (
+      <ScrollView style={styles.container}>
+        <View style={styles.header}>
+        <Text style={styles.title}>Importar Dados da Sonda</Text>
+        <Text style={styles.subtitle}>
+          Upload do arquivo XLSX da sonda de coleta
+        </Text>
+        </View>
+
+        <View style={styles.content}>
+        <View style={styles.fileSection}>
+          <Text style={styles.sectionTitle}>1. Selecionar Arquivo</Text>
+          
+          <TouchableOpacity
+            style={styles.selectButton}
+            onPress={selectFile}
+            disabled={loading}
+          >
+            <Text style={styles.selectButtonText}>
+              {selectedFile && !selectedFile.canceled 
+                ? '📄 Arquivo Selecionado' 
+                : '📁 Selecionar Arquivo XLSX'
+              }
+            </Text>
+          </TouchableOpacity>
+
+          {selectedFile && !selectedFile.canceled && (
+            <View style={styles.fileInfo}>
+              <Text style={styles.fileName}>
+                {selectedFile.assets[0].name}
+              </Text>
+              <Text style={styles.fileSize}>
+                {((selectedFile.assets[0]?.size || 0) / 1024).toFixed(1)} KB
+              </Text>
+            </View>
+          )}
+        </View>
+
+        <View style={styles.processSection}>
+          <Text style={styles.sectionTitle}>2. Processar Arquivo</Text>
+          
+          <TouchableOpacity
+            style={[
+              styles.processButton,
+              (!selectedFile || selectedFile.canceled) && styles.processButtonDisabled,
+            ]}
+            onPress={processXLSXFile}
+            disabled={!selectedFile || selectedFile.canceled || processing}
+          >
+            {processing ? (
+              <ActivityIndicator color="#fff" />
+            ) : (
+              <Text style={styles.processButtonText}>
+                🔄 Processar Dados
+              </Text>
+            )}
+          </TouchableOpacity>
+        </View>
+
+        {processedData.length > 0 && (
+          <View style={styles.resultsSection}>
+            <Text style={styles.sectionTitle}>3. Progresso das Coletas</Text>
+            <View style={styles.resultsCard}>
+              <Text style={styles.resultsText}>
+                📊 {completedRows}/{totalRows} coletas processadas
+              </Text>
+              <Text style={styles.resultsSubtext}>
+                {completedRows === totalRows 
+                  ? 'Todas as coletas têm fatores ambientais respondidos' 
+                  : `${totalRows - completedRows} coletas aguardando fatores ambientais`
+                }
+              </Text>
+              
+              {totalRows > 1 && (
+                <View style={styles.progressBar}>
+                  <View 
+                    style={[
+                      styles.progressFill, 
+                      { width: `${(completedRows / totalRows) * 100}%` }
+                    ]} 
+                  />
+                </View>
+              )}
+            </View>
+          </View>
+        )}
+
+        {readyToSync && (
+          <View style={styles.syncSection}>
+            <Text style={styles.sectionTitle}>4. Sincronizar</Text>
+            
+            <TouchableOpacity
+              style={styles.syncButton}
+              onPress={syncToSupabase}
+              disabled={loading}
+            >
+              {loading ? (
+                <ActivityIndicator color="#fff" />
+              ) : (
+                <Text style={styles.syncButtonText}>
+                  🔄 Sincronizar com Supabase
+                </Text>
+              )}
+            </TouchableOpacity>
+          </View>
+        )}
+
+        <View style={styles.helpSection}>
+          <Text style={styles.helpTitle}>📋 Formato Esperado</Text>
+          <Text style={styles.helpText}>
+            O arquivo deve conter as colunas: ID, Date, EC, pH, ORP(mV), DO(mg/L), Temperature(°C), CL(mg/L), etc.
+          </Text>
+          {totalRows > 1 && (
+            <Text style={styles.helpText}>
+              {'\n'}💡 <Text style={styles.boldText}>Múltiplas coletas:</Text> Você responderá os fatores ambientais para cada coleta individualmente, permitindo diferentes condições para cada dia.
+            </Text>
+          )}
+        </View>
+        </View>
+      </ScrollView>
+    );
+  }
+
   return (
     <KeyboardAvoidingView
       style={styles.container}
