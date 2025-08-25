@@ -106,13 +106,26 @@ export const clearSupabaseSession = async (): Promise<void> => {
       const keysToRemove: string[] = [];
       for (let i = 0; i < window.localStorage.length; i++) {
         const key = window.localStorage.key(i);
-        if (key?.startsWith('supabase.')) {
+        // Chaves usadas pelo supabase-js v2 no navegador
+        if (key && (key.startsWith('supabase.') || key.startsWith('sb-'))) {
           keysToRemove.push(key);
         }
       }
-      
-      keysToRemove.forEach(key => {
-        if (key) window.localStorage.removeItem(key);
+
+      // Chaves legadas/derivadas que podem existir
+      const legacyKeys = [
+        'supabase.auth.token',
+        'supabase.auth.admin',
+        'supabase.auth.user',
+        'supabase.auth.token.expires_at',
+        'supabase.auth.token.expires_in',
+        'supabase.auth.token.refresh_token',
+      ];
+
+      [...new Set([...keysToRemove, ...legacyKeys])].forEach((key) => {
+        try {
+          window.localStorage.removeItem(key);
+        } catch {}
       });
     }
     

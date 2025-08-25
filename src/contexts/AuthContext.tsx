@@ -496,7 +496,21 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       setVolunteer(null);
       setErrorMessage('');
       
-      
+      // 4. No web/PWA, opcionalmente forçar reload para garantir limpeza visual de sessão
+      if (typeof window !== 'undefined' && options?.forceReload) {
+        try {
+          // Redirecionar para a root (ou tela de login) após breve atraso para garantir storage limpo
+          setTimeout(() => {
+            // Use replace para evitar voltar ao histórico
+            if (window?.location) {
+              window.location.replace('/');
+            }
+          }, 50);
+        } catch (e) {
+          console.log('Falha ao redirecionar após logout (ignorado):', e);
+        }
+      }
+
       console.log('Logout concluído com sucesso');
       return true;
       
