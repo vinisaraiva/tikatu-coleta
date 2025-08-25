@@ -341,23 +341,32 @@ export default function XLSXImportScreen() {
           if (rowIndex === totalRows - 1) {
             console.log('Todas as linhas processadas, pronto para sincronizar');
             setReadyToSync(true);
-            Alert.alert(
-              'Processamento Concluído',
-              'Todos os fatores ambientais foram respondidos. Agora você pode sincronizar os dados.',
-              [{ text: 'OK' }]
-            );
+            if (isWeb) {
+              try { window.alert('Processamento Concluído\n\nTodos os fatores ambientais foram respondidos. Agora você pode sincronizar os dados.'); } catch {}
+            } else {
+              Alert.alert(
+                'Processamento Concluído',
+                'Todos os fatores ambientais foram respondidos. Agora você pode sincronizar os dados.',
+                [{ text: 'OK' }]
+              );
+            }
           } else {
             // Ir para a próxima linha
             const nextRow = updatedData[rowIndex + 1];
             if (nextRow) {
-              Alert.alert(
-                'Fatores Ambientais Salvos',
-                `Fatores ambientais da coleta ${rowIndex + 1} salvos. Próxima coleta: ${nextRow.measuredAt}`,
-                [
-                  { text: 'Cancelar', style: 'cancel' },
-                  { text: 'Próxima Coleta', onPress: () => startEnvironmentalFactors(nextRow, rowIndex + 1, updatedData.length) },
-                ]
-              );
+              if (isWeb) {
+                // No web, abrir automaticamente a próxima coleta
+                startEnvironmentalFactors(nextRow, rowIndex + 1, updatedData.length);
+              } else {
+                Alert.alert(
+                  'Fatores Ambientais Salvos',
+                  `Fatores ambientais da coleta ${rowIndex + 1} salvos. Próxima coleta: ${nextRow.measuredAt}`,
+                  [
+                    { text: 'Cancelar', style: 'cancel' },
+                    { text: 'Próxima Coleta', onPress: () => startEnvironmentalFactors(nextRow, rowIndex + 1, updatedData.length) },
+                  ]
+                );
+              }
             } else {
               console.error('Próxima linha não encontrada');
             }
