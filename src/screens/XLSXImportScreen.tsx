@@ -7,6 +7,7 @@ import {
   ScrollView,
   Alert,
   ActivityIndicator,
+  KeyboardAvoidingView,
 } from 'react-native';
 import { Platform } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
@@ -531,15 +532,23 @@ export default function XLSXImportScreen() {
   const totalRows = processedData.length;
 
   return (
-    <ScrollView style={styles.container}>
-      <View style={styles.header}>
+    <KeyboardAvoidingView
+      style={styles.container}
+      behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+    >
+      <ScrollView
+        style={styles.container}
+        contentContainerStyle={styles.scrollContent}
+        keyboardShouldPersistTaps="handled"
+      >
+        <View style={styles.header}>
         <Text style={styles.title}>Importar Dados da Sonda</Text>
         <Text style={styles.subtitle}>
           Upload do arquivo XLSX da sonda de coleta
         </Text>
-      </View>
+        </View>
 
-      <View style={styles.content}>
+        <View style={styles.content}>
         <View style={styles.fileSection}>
           <Text style={styles.sectionTitle}>1. Selecionar Arquivo</Text>
           
@@ -648,8 +657,9 @@ export default function XLSXImportScreen() {
             </Text>
           )}
         </View>
-      </View>
-    </ScrollView>
+        </View>
+      </ScrollView>
+    </KeyboardAvoidingView>
   );
 }
 
@@ -657,6 +667,10 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: '#f5f5f5',
+  },
+  scrollContent: {
+    flexGrow: 1,
+    paddingBottom: 40,
   },
   header: {
     backgroundColor: '#0066CC',
