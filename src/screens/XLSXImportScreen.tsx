@@ -533,7 +533,7 @@ export default function XLSXImportScreen() {
 
   if (isWeb) {
     return (
-      <ScrollView style={styles.container}>
+      <ScrollView style={styles.webScroll} contentContainerStyle={styles.scrollContent} keyboardShouldPersistTaps="handled">
         <View style={styles.header}>
         <Text style={styles.title}>Importar Dados da Sonda</Text>
         <Text style={styles.subtitle}>
@@ -799,6 +799,10 @@ const styles = StyleSheet.create({
   },
   scroll: {
     flex: 1,
+  },
+  webScroll: {
+    height: '100vh',
+    backgroundColor: '#f5f5f5',
   },
   header: {
     backgroundColor: '#0066CC',
