@@ -259,7 +259,7 @@ export default function XLSXImportScreen() {
 
         if (isWeb) {
           // No web, seguir direto para fatores ambientais da primeira linha
-          startEnvironmentalFactors(processedRows[0], 0);
+          startEnvironmentalFactors(processedRows[0], 0, processedRows.length);
           return;
         }
 
@@ -269,7 +269,7 @@ export default function XLSXImportScreen() {
             `Encontrada ${processedRows.length} coleta válida. Agora responda os fatores ambientais.`,
             [
               { text: 'Cancelar', style: 'cancel' },
-              { text: 'Continuar', onPress: () => startEnvironmentalFactors(processedRows[0], 0) },
+              { text: 'Continuar', onPress: () => startEnvironmentalFactors(processedRows[0], 0, processedRows.length) },
             ]
           );
         } else {
@@ -278,7 +278,7 @@ export default function XLSXImportScreen() {
             `Encontradas ${processedRows.length} coletas válidas. Você responderá os fatores ambientais para cada coleta individualmente.`,
             [
               { text: 'Cancelar', style: 'cancel' },
-              { text: 'Continuar', onPress: () => startEnvironmentalFactors(processedRows[0], 0) },
+              { text: 'Continuar', onPress: () => startEnvironmentalFactors(processedRows[0], 0, processedRows.length) },
             ]
           );
         }
@@ -292,7 +292,11 @@ export default function XLSXImportScreen() {
     }
   };
 
-  const startEnvironmentalFactors = async (row: ProcessedRow, rowIndex: number) => {
+  const startEnvironmentalFactors = async (
+    row: ProcessedRow,
+    rowIndex: number,
+    totalRowsOverride?: number
+  ) => {
     console.log(`Iniciando fatores ambientais para linha ${rowIndex + 1}/${processedData.length}`);
     console.log('Dados da linha:', {
       measuredAt: row.measuredAt,
@@ -302,10 +306,12 @@ export default function XLSXImportScreen() {
     });
 
     // Navegar para fatores ambientais com os dados da coleta específica
+    const totalRowsParam = typeof totalRowsOverride === 'number' ? totalRowsOverride : processedData.length;
+
     (navigation as any).navigate('EnvironmentalFactors', {
       measuredAt: row.measuredAt,
       parameters: row.parameters,
-      totalRows: processedData.length,
+      totalRows: totalRowsParam,
       currentRow: rowIndex + 1,
       onFactorsComplete: (factors: any) => {
         console.log(`Fatores ambientais completados para linha ${rowIndex + 1}:`, factors);
@@ -349,7 +355,7 @@ export default function XLSXImportScreen() {
                 `Fatores ambientais da coleta ${rowIndex + 1} salvos. Próxima coleta: ${nextRow.measuredAt}`,
                 [
                   { text: 'Cancelar', style: 'cancel' },
-                  { text: 'Próxima Coleta', onPress: () => startEnvironmentalFactors(nextRow, rowIndex + 1) },
+                  { text: 'Próxima Coleta', onPress: () => startEnvironmentalFactors(nextRow, rowIndex + 1, updatedData.length) },
                 ]
               );
             } else {
