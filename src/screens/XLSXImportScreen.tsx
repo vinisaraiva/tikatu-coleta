@@ -64,8 +64,15 @@ export default function XLSXImportScreen() {
   const [processedData, setProcessedData] = useState<ProcessedRow[]>([]);
   const [currentRowIndex, setCurrentRowIndex] = useState(0);
   const [readyToSync, setReadyToSync] = useState(false);
+  const [webToast, setWebToast] = useState<{ visible: boolean; text: string }>({ visible: false, text: '' });
 
   const isWeb = Platform.OS === 'web';
+
+  const showWebToast = (text: string) => {
+    if (!isWeb) return;
+    setWebToast({ visible: true, text });
+    setTimeout(() => setWebToast({ visible: false, text: '' }), 3000);
+  };
 
   const showAlert = (title: string, message: string) => {
     if (isWeb && typeof window !== 'undefined') {
@@ -502,15 +509,13 @@ export default function XLSXImportScreen() {
       }
 
       if (isWeb) {
-        try {
-          window.alert(`Sincronização Concluída\n\n${processedData.length} coletas foram sincronizadas com o Supabase e o arquivo XLSX modificado foi enviado para o storage com sucesso!`);
-        } catch {}
+        showWebToast(`Sincronização concluída: ${processedData.length} coletas enviadas e arquivo salvo no storage.`);
         // Limpar estado e voltar
         setSelectedFile(null);
         setProcessedData([]);
         setCurrentRowIndex(0);
         setReadyToSync(false);
-        navigation.goBack();
+        setTimeout(() => navigation.goBack(), 800);
       } else {
         Alert.alert(
           'Sincronização Concluída',
@@ -545,6 +550,7 @@ export default function XLSXImportScreen() {
 
   if (isWeb) {
     return (
+      <>
       <ScrollView style={styles.webScroll} contentContainerStyle={styles.scrollContent} keyboardShouldPersistTaps="handled">
         <View style={styles.header}>
         <Text style={styles.title}>Importar Dados da Sonda</Text>
@@ -664,6 +670,12 @@ export default function XLSXImportScreen() {
         </View>
         </View>
       </ScrollView>
+      {webToast.visible && (
+        <View style={styles.webToast} pointerEvents="none">
+          <Text style={styles.webToastText}>{webToast.text}</Text>
+        </View>
+      )}
+      </>
     );
   }
 
@@ -815,6 +827,26 @@ const styles = StyleSheet.create({
   webScroll: {
     height: '100vh',
     backgroundColor: '#f5f5f5',
+  },
+  webToast: {
+    position: 'fixed',
+    left: '5%',
+    right: '5%',
+    bottom: 20,
+    backgroundColor: '#16a34a',
+    padding: 14,
+    borderRadius: 10,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.2,
+    shadowRadius: 4,
+    zIndex: 9999,
+  },
+  webToastText: {
+    color: '#fff',
+    fontSize: 14,
+    textAlign: 'center',
+    fontWeight: '600',
   },
   header: {
     backgroundColor: '#0066CC',
