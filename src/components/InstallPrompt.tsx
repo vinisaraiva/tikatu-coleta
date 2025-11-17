@@ -118,11 +118,39 @@ export default function InstallPrompt() {
         setDeferredPrompt(null);
       } catch (error) {
         console.error('Erro ao instalar:', error);
-        // Se falhar, mostrar modal com instruções
+        // Se falhar, tentar Web Share API ou mostrar modal
+        tryIOSShare();
+      }
+    } else if (isIOS) {
+      // iOS: tentar abrir menu de compartilhamento diretamente
+      tryIOSShare();
+    } else {
+      // Outros: mostrar modal com instruções
+      setShowModal(true);
+    }
+  };
+
+  const tryIOSShare = async () => {
+    // Tentar usar Web Share API para abrir menu de compartilhamento no iOS
+    if (typeof window !== 'undefined' && (window.navigator as any).share) {
+      try {
+        const shareData = {
+          title: 'Tikatu Coleta',
+          text: 'Instale o Tikatu Coleta na sua tela inicial',
+          url: window.location.href,
+        };
+        
+        await (window.navigator as any).share(shareData);
+        // Se o compartilhamento for bem-sucedido, o usuário pode selecionar "Adicionar à Tela Inicial"
+      } catch (error: any) {
+        // Se o usuário cancelar ou se der erro, mostrar modal com instruções
+        if (error.name !== 'AbortError') {
+          console.log('Web Share não disponível, mostrando modal');
+        }
         setShowModal(true);
       }
     } else {
-      // Sem prompt nativo: mostrar modal com instruções
+      // Web Share API não disponível, mostrar modal com instruções
       setShowModal(true);
     }
   };
@@ -142,7 +170,7 @@ export default function InstallPrompt() {
   }
 
   const instructions = isIOS
-    ? 'Para instalar:\n\n1. Toque no botão de compartilhar (⬆️) na barra inferior\n2. Selecione "Adicionar à Tela Inicial"\n3. Toque em "Adicionar"'
+    ? 'Para instalar:\n\n1. No menu de compartilhamento que abriu, role para baixo\n2. Selecione "Adicionar à Tela Inicial"\n3. Toque em "Adicionar"\n\nSe o menu não abriu, toque no botão de compartilhar (⬆️) na barra inferior do Safari.'
     : 'Para instalar:\n\n1. Toque no menu (⋮) no canto superior direito\n2. Selecione "Instalar app" ou "Adicionar à tela inicial"\n3. Confirme a instalação';
 
   return (
