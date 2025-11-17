@@ -120,23 +120,26 @@ export default function InstallPrompt() {
         // Se falhar, mostrar instruções manuais
         showManualInstructions();
       }
+    } else if (isIOS) {
+      // iOS: mostrar instruções diretas
+      showManualInstructions();
     } else {
-      // Mostrar instruções manuais para iOS ou Android sem prompt
+      // Android sem prompt: mostrar instruções manuais
       showManualInstructions();
     }
   };
 
   const showManualInstructions = () => {
     const instructions = isIOS
-      ? 'Para instalar o Tikatu Coleta:\n\n1. Toque no botão de compartilhar (quadrado com seta ⬆️)\n2. Selecione "Adicionar à Tela Inicial"\n3. Toque em "Adicionar"'
-      : 'Para instalar o Tikatu Coleta:\n\n1. Toque no menu (três pontos ⋮)\n2. Selecione "Instalar app" ou "Adicionar à tela inicial"\n3. Confirme a instalação';
+      ? 'Para instalar:\n\n1. Toque no botão de compartilhar (⬆️) na barra inferior\n2. Selecione "Adicionar à Tela Inicial"\n3. Toque em "Adicionar"'
+      : 'Para instalar:\n\n1. Toque no menu (⋮) no canto superior direito\n2. Selecione "Instalar app" ou "Adicionar à tela inicial"\n3. Confirme a instalação';
 
     Alert.alert(
-      'Instalar App',
+      'Instalar Tikatu Coleta',
       instructions,
       [
-        { text: 'Entendi', onPress: () => handleDismiss() },
-        { text: 'Cancelar', style: 'cancel' }
+        { text: 'Entendi', onPress: () => {} },
+        { text: 'Fechar', style: 'cancel', onPress: () => handleDismiss() }
       ]
     );
   };
@@ -169,7 +172,7 @@ export default function InstallPrompt() {
             onPress={handleInstall}
           >
             <Text style={styles.installButtonText}>
-              {isIOS ? 'Como Instalar' : 'Instalar'}
+              Instalar
             </Text>
           </TouchableOpacity>
           <View style={{ width: 8 }} />
