@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { View, Text, TouchableOpacity, Platform, StyleSheet, Alert } from 'react-native';
+import { View, Text, TouchableOpacity, StyleSheet } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 
 const INSTALL_BANNER_DISMISSED_KEY = 'install_banner_dismissed';
@@ -11,6 +11,7 @@ interface BeforeInstallPromptEvent extends Event {
 
 export default function InstallPrompt() {
   const [showBanner, setShowBanner] = useState(false);
+  const [showModal, setShowModal] = useState(false);
   const [isIOS, setIsIOS] = useState(false);
   const [isAndroid, setIsAndroid] = useState(false);
   const [deferredPrompt, setDeferredPrompt] = useState<BeforeInstallPromptEvent | null>(null);
@@ -107,7 +108,7 @@ export default function InstallPrompt() {
     if (deferredPrompt) {
       // Android: usar o prompt nativo
       try {
-        deferredPrompt.prompt();
+        await deferredPrompt.prompt();
         const { outcome } = await deferredPrompt.userChoice;
         
         if (outcome === 'accepted') {
@@ -117,31 +118,17 @@ export default function InstallPrompt() {
         setDeferredPrompt(null);
       } catch (error) {
         console.error('Erro ao instalar:', error);
-        // Se falhar, mostrar instruções manuais
-        showManualInstructions();
+        // Se falhar, mostrar modal com instruções
+        setShowModal(true);
       }
-    } else if (isIOS) {
-      // iOS: mostrar instruções diretas
-      showManualInstructions();
     } else {
-      // Android sem prompt: mostrar instruções manuais
-      showManualInstructions();
+      // Sem prompt nativo: mostrar modal com instruções
+      setShowModal(true);
     }
   };
 
-  const showManualInstructions = () => {
-    const instructions = isIOS
-      ? 'Para instalar:\n\n1. Toque no botão de compartilhar (⬆️) na barra inferior\n2. Selecione "Adicionar à Tela Inicial"\n3. Toque em "Adicionar"'
-      : 'Para instalar:\n\n1. Toque no menu (⋮) no canto superior direito\n2. Selecione "Instalar app" ou "Adicionar à tela inicial"\n3. Confirme a instalação';
-
-    Alert.alert(
-      'Instalar Tikatu Coleta',
-      instructions,
-      [
-        { text: 'Entendi', onPress: () => {} },
-        { text: 'Fechar', style: 'cancel', onPress: () => handleDismiss() }
-      ]
-    );
+  const closeModal = () => {
+    setShowModal(false);
   };
 
   const handleDismiss = async () => {
@@ -150,41 +137,76 @@ export default function InstallPrompt() {
   };
 
   // Não mostrar se não for web ou se já estiver instalado
-  if (!isWeb || !showBanner || isStandalone) {
+  if (!isWeb || isStandalone) {
     return null;
   }
 
+  const instructions = isIOS
+    ? 'Para instalar:\n\n1. Toque no botão de compartilhar (⬆️) na barra inferior\n2. Selecione "Adicionar à Tela Inicial"\n3. Toque em "Adicionar"'
+    : 'Para instalar:\n\n1. Toque no menu (⋮) no canto superior direito\n2. Selecione "Instalar app" ou "Adicionar à tela inicial"\n3. Confirme a instalação';
+
   return (
-    <View style={styles.container}>
-      <View style={styles.banner}>
-        <View style={styles.content}>
-          <Text style={styles.title}>📱 Instalar Tikatu Coleta</Text>
-          <Text style={styles.description}>
-            {isIOS 
-              ? 'Adicione à tela inicial para acesso rápido'
-              : 'Instale o app para uma melhor experiência'
-            }
-          </Text>
+    <>
+      {showBanner && (
+        <View style={styles.container}>
+          <View style={styles.banner}>
+            <View style={styles.content}>
+              <Text style={styles.title}>📱 Instalar Tikatu Coleta</Text>
+              <Text style={styles.description}>
+                {isIOS 
+                  ? 'Adicione à tela inicial para acesso rápido'
+                  : 'Instale o app para uma melhor experiência'
+                }
+              </Text>
+            </View>
+            <View style={styles.buttons}>
+              <TouchableOpacity 
+                style={styles.installButton} 
+                onPress={handleInstall}
+              >
+                <Text style={styles.installButtonText}>
+                  Instalar
+                </Text>
+              </TouchableOpacity>
+              <View style={{ width: 8 }} />
+              <TouchableOpacity 
+                style={styles.dismissButton} 
+                onPress={handleDismiss}
+              >
+                <Text style={styles.dismissButtonText}>✕</Text>
+              </TouchableOpacity>
+            </View>
+          </View>
         </View>
-        <View style={styles.buttons}>
-          <TouchableOpacity 
-            style={styles.installButton} 
-            onPress={handleInstall}
-          >
-            <Text style={styles.installButtonText}>
-              Instalar
-            </Text>
-          </TouchableOpacity>
-          <View style={{ width: 8 }} />
-          <TouchableOpacity 
-            style={styles.dismissButton} 
-            onPress={handleDismiss}
-          >
-            <Text style={styles.dismissButtonText}>✕</Text>
-          </TouchableOpacity>
+      )}
+
+      {showModal && (
+        <View style={styles.modalOverlay}>
+          <View style={styles.modalContent}>
+            <Text style={styles.modalTitle}>📱 Instalar Tikatu Coleta</Text>
+            <Text style={styles.modalText}>{instructions}</Text>
+            <View style={styles.modalButtons}>
+              <TouchableOpacity 
+                style={styles.modalButton} 
+                onPress={closeModal}
+              >
+                <Text style={styles.modalButtonText}>Entendi</Text>
+              </TouchableOpacity>
+              <View style={{ width: 12 }} />
+              <TouchableOpacity 
+                style={[styles.modalButton, styles.modalButtonSecondary]} 
+                onPress={() => {
+                  closeModal();
+                  handleDismiss();
+                }}
+              >
+                <Text style={[styles.modalButtonText, styles.modalButtonTextSecondary]}>Fechar</Text>
+              </TouchableOpacity>
+            </View>
+          </View>
         </View>
-      </View>
-    </View>
+      )}
+    </>
   );
 }
 
@@ -246,6 +268,67 @@ const styles = StyleSheet.create({
     color: '#FFFFFF',
     fontSize: 18,
     fontWeight: 'bold',
+  },
+  modalOverlay: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
+    backgroundColor: 'rgba(0, 0, 0, 0.5)',
+    justifyContent: 'center',
+    alignItems: 'center',
+    zIndex: 10000,
+  },
+  modalContent: {
+    backgroundColor: '#FFFFFF',
+    borderRadius: 16,
+    padding: 24,
+    margin: 20,
+    maxWidth: 400,
+    width: '90%',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.3,
+    shadowRadius: 8,
+    elevation: 10,
+  },
+  modalTitle: {
+    fontSize: 20,
+    fontWeight: 'bold',
+    color: '#0066CC',
+    marginBottom: 16,
+    textAlign: 'center',
+  },
+  modalText: {
+    fontSize: 16,
+    color: '#333333',
+    lineHeight: 24,
+    marginBottom: 24,
+    textAlign: 'left',
+  },
+  modalButtons: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+  },
+  modalButton: {
+    flex: 1,
+    backgroundColor: '#0066CC',
+    paddingVertical: 12,
+    paddingHorizontal: 20,
+    borderRadius: 8,
+    alignItems: 'center',
+  },
+  modalButtonSecondary: {
+    backgroundColor: '#E0E0E0',
+  },
+  modalButtonText: {
+    color: '#FFFFFF',
+    fontSize: 16,
+    fontWeight: 'bold',
+  },
+  modalButtonTextSecondary: {
+    color: '#333333',
   },
 });
 
