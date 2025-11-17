@@ -18,6 +18,9 @@ import ProfileScreen from './src/screens/ProfileScreen';
 // Context
 import { AuthProvider, useAuth } from './src/contexts/AuthContext';
 
+// Components
+import InstallPrompt from './src/components/InstallPrompt';
+
 const Stack = createStackNavigator();
 const Tab = createBottomTabNavigator();
 
@@ -88,6 +91,7 @@ export default function App() {
   return (
     <AuthProvider>
       <AppNavigator />
+      <InstallPrompt />
       <StatusBar style="auto" />
     </AuthProvider>
   );
