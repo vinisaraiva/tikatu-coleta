@@ -70,14 +70,6 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     
     const verifyAuth = async () => {
       try {
-        // No ambiente web, não restaurar sessão automaticamente
-        if (typeof window !== 'undefined' && !window.location.hostname.includes('localhost')) {
-          if (isMounted) {
-            setLoading(false);
-          }
-          return;
-        }
-        
         // Configurar timeout para evitar loading infinito
         timer = window.setTimeout(() => {
           if (isMounted) {
@@ -85,46 +77,20 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
           }
         }, 5000); // Timeout de 5 segundos
         
-        // 1. Verificar se há uma sessão ativa no Supabase
-        const { data: { session }, error: sessionError } = await supabase.auth.getSession();
-        
-        if (sessionError) {
-          console.error('Erro ao verificar sessão:', sessionError);
-          throw sessionError;
-        }
-        
-        // Se não houver sessão ativa, limpar dados locais e sair
-        if (!session) {
-          console.log('Nenhuma sessão ativa encontrada');
-          await AsyncStorage.multiRemove([
-            'volunteer',
-            'supabase.auth.token',
-            'supabase.auth.admin',
-            'supabase.auth.user'
-          ]);
-          
-          if (isMounted) {
-            setVolunteer(null);
-          }
-          return;
-        }
-        
-        console.log('Sessão ativa encontrada, verificando dados locais...');
-        
-        // 2. Verificar se há dados do voluntário no armazenamento local
+        // 1. Verificar se há dados do voluntário no armazenamento local
+        // Como usamos autenticação customizada (não Supabase Auth), verificamos primeiro o AsyncStorage
         const storedVolunteer = await AsyncStorage.getItem('volunteer');
         
         if (!storedVolunteer) {
           console.log('Nenhum dado de voluntário encontrado localmente');
-          // Forçar logout se não houver dados locais
-          await clearSupabaseSession();
           if (isMounted) {
             setVolunteer(null);
+            setSelectedPointId(null);
           }
           return;
         }
         
-        // 3. Validar os dados do voluntário
+        // 2. Validar os dados do voluntário
         try {
           const parsed = JSON.parse(storedVolunteer);
           
@@ -134,19 +100,30 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
             throw new Error('Dados incompletos');
           }
           
-          // Verificar se a sessão ainda é válida
-          const { data: { user }, error: userError } = await supabase.auth.getUser();
+          // 3. Verificar se o voluntário ainda existe e está ativo no banco
+          // Isso garante que se o voluntário foi desativado, a sessão seja invalidada
+          const { data: volunteerData, error: volunteerError } = await supabase
+            .from('volunteers')
+            .select('id, code, nome, is_active')
+            .eq('id', parsed.id)
+            .eq('code', parsed.code)
+            .maybeSingle();
           
-          if (userError || !user) {
-            console.warn('Sessão inválida ou expirada:', userError);
-            throw new Error('Sessão inválida');
+          if (volunteerError) {
+            console.error('Erro ao verificar voluntário no banco:', volunteerError);
+            throw new Error('Erro ao verificar voluntário');
           }
           
-          // Restaurar ponto selecionado
+          if (!volunteerData || !volunteerData.is_active) {
+            console.warn('Voluntário não encontrado ou inativo');
+            throw new Error('Voluntário inativo');
+          }
+          
+          // 4. Restaurar ponto selecionado
           const storedPointId = await AsyncStorage.getItem('selectedPointId');
           const pointId = storedPointId ? parseInt(storedPointId, 10) : null;
           
-          // Atualizar dados do voluntário no estado
+          // 5. Atualizar dados do voluntário no estado
           if (isMounted) {
             setVolunteer(parsed);
             setSelectedPointId(pointId);
@@ -158,6 +135,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
           // Limpar dados inválidos
           await AsyncStorage.multiRemove([
             'volunteer',
+            'selectedPointId',
             'supabase.auth.token',
             'supabase.auth.admin',
             'supabase.auth.user'
@@ -165,6 +143,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
           
           if (isMounted) {
             setVolunteer(null);
+            setSelectedPointId(null);
           }
         }
         
@@ -172,9 +151,9 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         console.error('Erro na verificação de autenticação:', error);
         // Garantir que os dados sejam limpos em caso de erro
         try {
-          await clearSupabaseSession();
           await AsyncStorage.multiRemove([
             'volunteer',
+            'selectedPointId',
             'supabase.auth.token',
             'supabase.auth.admin',
             'supabase.auth.user'
@@ -185,6 +164,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         
         if (isMounted) {
           setVolunteer(null);
+          setSelectedPointId(null);
         }
         
       } finally {
