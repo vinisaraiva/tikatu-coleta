@@ -57,8 +57,10 @@ function AppNavigator() {
     );
   }
 
+  // Usar key baseada no estado de autenticação para forçar reset da navegação
+  // Isso garante que quando isAuthenticated muda, a navegação é completamente recriada
   return (
-    <NavigationContainer>
+    <NavigationContainer key={isAuthenticated ? 'authenticated' : 'unauthenticated'}>
       <Stack.Navigator screenOptions={{ headerShown: false }}>
         {!isAuthenticated ? (
           <Stack.Screen name="Login" component={LoginScreen} />

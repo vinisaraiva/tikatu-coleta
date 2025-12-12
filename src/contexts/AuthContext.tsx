@@ -480,11 +480,17 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     try {
       setLoading(true);
       
-      // 1. Limpar sessão do Supabase
+      // 1. Limpar estado do contexto PRIMEIRO para atualizar a UI imediatamente
+      // Isso faz o AppNavigator reagir e mostrar a tela de login
+      setVolunteer(null);
+      setSelectedPointId(null);
+      setErrorMessage('');
+      
+      // 2. Limpar sessão do Supabase
       console.log('Limpando sessão do Supabase...');
       await clearSupabaseSession();
       
-      // 2. Limpar dados do AsyncStorage
+      // 3. Limpar dados do AsyncStorage
       console.log('Limpando AsyncStorage...');
       await AsyncStorage.multiRemove([
         'volunteer',
@@ -497,21 +503,19 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         'supabase.auth.token.refresh_token'
       ]);
       
-      // 3. Limpar estado do contexto
-      setVolunteer(null);
-      setSelectedPointId(null);
-      setErrorMessage('');
+      // 4. Aguardar um pouco para garantir que o estado seja propagado
+      await new Promise(resolve => setTimeout(resolve, 100));
       
-      // 4. No web/PWA, opcionalmente forçar reload para garantir limpeza visual de sessão
+      // 5. No web/PWA, opcionalmente forçar reload para garantir limpeza visual de sessão
       if (typeof window !== 'undefined' && options?.forceReload) {
         try {
-          // Redirecionar para a root (ou tela de login) após breve atraso para garantir storage limpo
+          // Redirecionar para a root (ou tela de login) após garantir que tudo foi limpo
           setTimeout(() => {
             // Use replace para evitar voltar ao histórico
             if (window?.location) {
               window.location.replace('/');
             }
-          }, 50);
+          }, 200);
         } catch (e) {
           console.log('Falha ao redirecionar após logout (ignorado):', e);
         }
@@ -525,12 +529,16 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       
       // Mesmo com erro, limpar estado local
       setVolunteer(null);
+      setSelectedPointId(null);
       setErrorMessage('');
       
       return false;
       
     } finally {
-      setLoading(false);
+      // Aguardar um pouco antes de desabilitar loading para garantir que a navegação aconteça
+      setTimeout(() => {
+        setLoading(false);
+      }, 300);
     }
   };
 
