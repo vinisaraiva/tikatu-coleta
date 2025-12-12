@@ -1,12 +1,13 @@
 import React from 'react';
-import { View, Text, StyleSheet } from 'react-native';
-import { useAuth } from '../contexts/AuthContext';
+import { View, Text, StyleSheet, ScrollView } from 'react-native';
+import { useAuth, getCurrentPoint } from '../contexts/AuthContext';
 
 export default function ProfileScreen() {
-  const { volunteer } = useAuth();
+  const { volunteer, selectedPointId } = useAuth();
+  const currentPoint = getCurrentPoint(volunteer, selectedPointId);
 
   return (
-    <View style={styles.container}>
+    <ScrollView style={styles.container}>
       <Text style={styles.title}>Perfil do Voluntário</Text>
       <View style={styles.infoContainer}>
         <Text style={styles.label}>Nome:</Text>
@@ -15,16 +16,42 @@ export default function ProfileScreen() {
         <Text style={styles.label}>Código:</Text>
         <Text style={styles.value}>{volunteer?.code}</Text>
         
-        <Text style={styles.label}>Cidade:</Text>
-        <Text style={styles.value}>{volunteer?.point?.river?.city?.name}</Text>
+        {currentPoint && (
+          <>
+            <Text style={styles.label}>Cidade:</Text>
+            <Text style={styles.value}>{currentPoint.river.city.name}</Text>
+            
+            <Text style={styles.label}>Rio:</Text>
+            <Text style={styles.value}>{currentPoint.river.name}</Text>
+            
+            <Text style={styles.label}>Ponto de Coleta Atual:</Text>
+            <Text style={styles.value}>{currentPoint.name}</Text>
+          </>
+        )}
         
-        <Text style={styles.label}>Rio:</Text>
-        <Text style={styles.value}>{volunteer?.point?.river?.name}</Text>
-        
-        <Text style={styles.label}>Ponto de Coleta:</Text>
-        <Text style={styles.value}>{volunteer?.point?.name}</Text>
+        {volunteer?.points && volunteer.points.length > 1 && (
+          <>
+            <Text style={styles.sectionTitle}>Todos os Pontos de Coleta:</Text>
+            {volunteer.points.map((point) => (
+              <View key={point.id} style={styles.pointCard}>
+                <View style={styles.pointHeader}>
+                  <Text style={styles.pointName}>{point.name}</Text>
+                  {point.is_primary && (
+                    <Text style={styles.primaryBadge}>Principal</Text>
+                  )}
+                  {selectedPointId === point.id && (
+                    <Text style={styles.selectedBadge}>Selecionado</Text>
+                  )}
+                </View>
+                <Text style={styles.pointLocation}>
+                  {point.river.city.name} - {point.river.name}
+                </Text>
+              </View>
+            ))}
+          </>
+        )}
       </View>
-    </View>
+    </ScrollView>
   );
 }
 
@@ -64,5 +91,55 @@ const styles = StyleSheet.create({
     fontSize: 16,
     color: '#666',
     marginBottom: 10,
+  },
+  sectionTitle: {
+    fontSize: 18,
+    fontWeight: 'bold',
+    color: '#333',
+    marginTop: 20,
+    marginBottom: 15,
+  },
+  pointCard: {
+    backgroundColor: '#f8fafc',
+    padding: 15,
+    borderRadius: 8,
+    marginBottom: 10,
+    borderWidth: 1,
+    borderColor: '#e2e8f0',
+  },
+  pointHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: 8,
+  },
+  pointName: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: '#1e293b',
+    flex: 1,
+  },
+  primaryBadge: {
+    fontSize: 12,
+    fontWeight: '600',
+    color: '#0066CC',
+    backgroundColor: '#dbeafe',
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    borderRadius: 4,
+    marginLeft: 8,
+  },
+  selectedBadge: {
+    fontSize: 12,
+    fontWeight: '600',
+    color: '#059669',
+    backgroundColor: '#d1fae5',
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    borderRadius: 4,
+    marginLeft: 8,
+  },
+  pointLocation: {
+    fontSize: 14,
+    color: '#64748b',
   },
 }); 

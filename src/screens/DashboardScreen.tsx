@@ -10,20 +10,23 @@ import {
   ActivityIndicator,
 } from 'react-native';
 import { useNavigation, useFocusEffect } from '@react-navigation/native';
-import { useAuth } from '../contexts/AuthContext';
+import { useAuth, getCurrentPoint } from '../contexts/AuthContext';
 import { supabase } from '../services/supabase';
+import PointSelector from '../components/PointSelector';
 
 export default function DashboardScreen() {
   const navigation = useNavigation();
-  const { volunteer, logout } = useAuth();
+  const { volunteer, selectedPointId, logout } = useAuth();
   const [loading, setLoading] = useState(true);
   const [stats, setStats] = useState({
     todayCollections: 0,
     totalCollections: 0,
   });
 
+  const currentPoint = getCurrentPoint(volunteer, selectedPointId);
+
   const fetchCollectionStats = async () => {
-    if (!volunteer?.point_id) {
+    if (!currentPoint?.id) {
       setLoading(false);
       return;
     }
@@ -36,14 +39,14 @@ export default function DashboardScreen() {
       const { count: todayCount } = await supabase
         .from('readings')
         .select('*', { count: 'exact', head: true })
-        .eq('point_id', volunteer.point_id)
+        .eq('point_id', currentPoint.id)
         .gte('measured_at', today.toISOString());
 
       // Buscar total de coletas
       const { count: totalCount } = await supabase
         .from('readings')
         .select('*', { count: 'exact', head: true })
-        .eq('point_id', volunteer.point_id);
+        .eq('point_id', currentPoint.id);
 
       setStats({
         todayCollections: todayCount || 0,
@@ -56,11 +59,11 @@ export default function DashboardScreen() {
     }
   };
 
-  // Atualizar estatísticas quando a tela receber foco
+  // Atualizar estatísticas quando a tela receber foco ou ponto selecionado mudar
   useFocusEffect(
     React.useCallback(() => {
       fetchCollectionStats();
-    }, [volunteer])
+    }, [volunteer, selectedPointId])
   );
 
   const handleLogout = () => {
@@ -96,12 +99,19 @@ export default function DashboardScreen() {
         <Text style={styles.welcomeText}>
           Olá, {volunteer?.nome || 'Voluntário'}
         </Text>
-        <Text style={styles.locationText}>
-          {volunteer?.point?.river?.city?.name} - {volunteer?.point?.river?.name}
-        </Text>
-        <Text style={styles.pointText}>
-          Ponto: {volunteer?.point?.name}
-        </Text>
+        {currentPoint && (
+          <>
+            <Text style={styles.locationText}>
+              {currentPoint.river.city.name} - {currentPoint.river.name}
+            </Text>
+            <Text style={styles.pointText}>
+              Ponto: {currentPoint.name}
+            </Text>
+          </>
+        )}
+        <View style={styles.selectorContainer}>
+          <PointSelector />
+        </View>
       </View>
 
       <View style={styles.statsContainer}>
@@ -200,6 +210,10 @@ const styles = StyleSheet.create({
     fontSize: 14,
     color: '#64748b',
     textAlign: 'center',
+  },
+  selectorContainer: {
+    marginTop: 12,
+    paddingHorizontal: 20,
   },
   statsContainer: {
     flexDirection: 'row',

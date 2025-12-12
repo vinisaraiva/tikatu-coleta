@@ -14,7 +14,8 @@ import { useNavigation } from '@react-navigation/native';
 import * as DocumentPicker from 'expo-document-picker';
 import * as FileSystem from 'expo-file-system';
 import * as XLSX from 'xlsx';
-import { useAuth } from '../contexts/AuthContext';
+import { useAuth, getCurrentPoint } from '../contexts/AuthContext';
+import PointSelector from '../components/PointSelector';
 import { CollectionService } from '../services/collectionService';
 import { uploadVolunteerFile } from '../services/uploadService';
 
@@ -57,7 +58,7 @@ interface ProcessedRow {
 
 export default function XLSXImportScreen() {
   const navigation = useNavigation();
-  const { volunteer } = useAuth();
+  const { volunteer, selectedPointId } = useAuth();
   const [loading, setLoading] = useState(false);
   const [processing, setProcessing] = useState(false);
   const [selectedFile, setSelectedFile] = useState<DocumentPicker.DocumentPickerResult | null>(null);
@@ -402,21 +403,22 @@ export default function XLSXImportScreen() {
     setLoading(true);
 
     try {
-      // Verificar dados do voluntário
+      // Verificar dados do voluntário e ponto selecionado
+      const currentPoint = getCurrentPoint(volunteer, selectedPointId);
+      
       console.log('Dados do voluntário antes da sincronização:');
       console.log('Volunteer:', volunteer);
-      console.log('Point ID:', volunteer?.point_id);
-      console.log('Point:', volunteer?.point);
+      console.log('Current Point:', currentPoint);
 
-      if (!volunteer?.point_id) {
-        throw new Error('Point ID do voluntário não encontrado');
+      if (!currentPoint?.id) {
+        throw new Error('Selecione um ponto de coleta antes de sincronizar');
       }
 
       // Processar todas as linhas com seus fatores ambientais específicos
       for (let i = 0; i < processedData.length; i++) {
         const row = processedData[i];
         const readingData = {
-          point_id: volunteer.point_id,
+          point_id: currentPoint.id,
           measured_at: row.measuredAt,
           factors: row.environmentalFactors,
           parameters: row.parameters,
@@ -887,6 +889,9 @@ const styles = StyleSheet.create({
     shadowOpacity: 0.1,
     shadowRadius: 3.84,
     elevation: 5,
+  },
+  selectorContainer: {
+    marginBottom: 15,
   },
   sectionTitle: {
     fontSize: 18,

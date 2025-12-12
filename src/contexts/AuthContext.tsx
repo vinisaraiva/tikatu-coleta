@@ -5,29 +5,36 @@ import { getSupabase, testSupabaseConnection, clearSupabaseSession } from '../se
 // Obter a instância do Supabase
 const supabase = getSupabase();
 
+export interface Point {
+  id: number;
+  name: string;
+  river: {
+    id: number;
+    name: string;
+    city: {
+      id: number;
+      name: string;
+    };
+  };
+  is_primary?: boolean;
+}
+
 interface Volunteer {
   id: number;
   code: string;
   nome: string;
   password_hash?: string; // Campo correto do banco
-  point_id: number;
   is_active?: boolean;
-  point: {
-    id: number;
-    name: string;
-    river: {
-      id: number;
-      name: string;
-      city: {
-        id: number;
-        name: string;
-      };
-    };
-  };
+  points: Point[];
+  // Manter point e point_id para compatibilidade (usar ponto primário ou selecionado)
+  point?: Point;
+  point_id?: number;
 }
 
 interface AuthContextType {
   volunteer: Volunteer | null;
+  selectedPointId: number | null;
+  setSelectedPointId: (pointId: number | null) => void;
   isAuthenticated: boolean;
   errorMessage: string;
   login: (code: string, password: string) => Promise<boolean>;
@@ -47,6 +54,7 @@ export const useAuth = () => {
 
 export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const [volunteer, setVolunteer] = useState<Volunteer | null>(null);
+  const [selectedPointId, setSelectedPointId] = useState<number | null>(null);
   const [loading, setLoading] = useState(true);
   const [errorMessage, setErrorMessage] = useState('');
 
@@ -134,10 +142,15 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
             throw new Error('Sessão inválida');
           }
           
+          // Restaurar ponto selecionado
+          const storedPointId = await AsyncStorage.getItem('selectedPointId');
+          const pointId = storedPointId ? parseInt(storedPointId, 10) : null;
+          
           // Atualizar dados do voluntário no estado
           if (isMounted) {
             setVolunteer(parsed);
-            console.log('Voluntário autenticado:', parsed.code);
+            setSelectedPointId(pointId);
+            console.log('Voluntário autenticado:', parsed.code, '- Ponto selecionado:', pointId);
           }
           
         } catch (error) {
@@ -305,109 +318,106 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       try {
         console.log('Buscando dados completos do voluntário...');
         
-        // 1. Primeiro, buscar os dados básicos do voluntário se não estiverem completos
-        let volunteerData = { ...data };
+        // 1. Buscar todos os pontos do voluntário via tabela volunteer_points
+        console.log(`Buscando pontos do voluntário ${data.id}...`);
         
-        // 2. Buscar dados do ponto, rio e cidade em consultas separadas para melhor controle
-        if (data.point_id) {
-          console.log(`Buscando dados do ponto ${data.point_id}...`);
-          
-          // Buscar dados do ponto com relacionamentos aninhados
-          const { data: pointData, error: pointError } = await supabase
-            .from('points')
-            .select(`
-              *,
+        const { data: volunteerPointsData, error: vpError } = await supabase
+          .from('volunteer_points')
+          .select(`
+            point_id,
+            is_primary,
+            point:points (
+              id,
+              name,
               river:rivers (
-                *,
-                city:cities(*)
+                id,
+                name,
+                city:cities (
+                  id,
+                  name
+                )
               )
-            `)
-            .eq('id', data.point_id)
-            .single();
-            
-          if (pointError) {
-            console.error('Erro ao buscar dados do ponto:', pointError);
-            throw new Error('Erro ao carregar informações do local');
-          }
-          
-          // Estruturar os dados do ponto com valores padrão caso faltem
-          volunteerData.point = {
-            id: pointData?.id || 0,
-            name: pointData?.name || 'Ponto não informado',
-            river: pointData?.river ? {
-              id: pointData.river.id || 0,
-              name: pointData.river.name || 'Rio não informado',
-              city: pointData.river.city ? {
-                id: pointData.river.city.id || 0,
-                name: pointData.river.city.name || 'Cidade não informada'
-              } : { id: 0, name: 'Cidade não informada' }
-            } : { 
-              id: 0, 
-              name: 'Rio não informado', 
-              city: { id: 0, name: 'Cidade não informada' } 
-            }
-          };
-          
-          console.log('Dados do ponto carregados:', volunteerData.point);
-        } else {
-          // Se não houver point_id, definir valores padrão
-          volunteerData.point = {
-            id: 0,
-            name: 'Ponto não informado',
-            river: {
-              id: 0,
-              name: 'Rio não informado',
-              city: {
-                id: 0,
-                name: 'Cidade não informada'
-              }
-            }
-          };
+            )
+          `)
+          .eq('volunteer_id', data.id);
+        
+        if (vpError) {
+          console.error('Erro ao buscar pontos do voluntário:', vpError);
+          throw new Error('Erro ao carregar pontos de coleta');
         }
         
-        // 3. Garantir que todos os campos obrigatórios existam
-        const formattedData: Volunteer = {
-          id: volunteerData.id,
-          code: volunteerData.code || '',
-          nome: volunteerData.nome || 'Voluntário',
-          point_id: volunteerData.point_id || 0,
-          is_active: volunteerData.is_active !== undefined ? volunteerData.is_active : true,
-          point: volunteerData.point || {
+        // 2. Estruturar os pontos
+        const points: Point[] = (volunteerPointsData || []).map((vp: any) => ({
+          id: vp.point?.id || 0,
+          name: vp.point?.name || 'Ponto não informado',
+          river: vp.point?.river ? {
+            id: vp.point.river.id || 0,
+            name: vp.point.river.name || 'Rio não informado',
+            city: vp.point.river.city ? {
+              id: vp.point.river.city.id || 0,
+              name: vp.point.river.city.name || 'Cidade não informada'
+            } : { id: 0, name: 'Cidade não informada' }
+          } : {
             id: 0,
-            name: 'Ponto não informado',
-            river: {
+            name: 'Rio não informado',
+            city: { id: 0, name: 'Cidade não informada' }
+          },
+          is_primary: vp.is_primary || false
+        }));
+        
+        console.log(`Pontos encontrados: ${points.length}`, points);
+        
+        // 3. Determinar ponto primário ou primeiro ponto
+        const primaryPoint = points.find(p => p.is_primary) || points[0] || null;
+        const defaultPoint: Point = primaryPoint || {
+          id: 0,
+          name: 'Nenhum ponto cadastrado',
+          river: {
+            id: 0,
+            name: 'Rio não informado',
+            city: {
               id: 0,
-              name: 'Rio não informado',
-              city: {
-                id: 0,
-                name: 'Cidade não informada'
-              }
+              name: 'Cidade não informada'
             }
-          }
+          },
+          is_primary: false
+        };
+        
+        // 4. Garantir que todos os campos obrigatórios existam
+        const formattedData: Volunteer = {
+          id: data.id,
+          code: data.code || '',
+          nome: data.nome || 'Voluntário',
+          is_active: data.is_active !== undefined ? data.is_active : true,
+          points: points.length > 0 ? points : [],
+          point: defaultPoint,
+          point_id: defaultPoint.id || undefined
         };
         
         console.log('Dados formatados do voluntário:', formattedData);
         
-        // 4. Salvar no AsyncStorage
+        // 5. Definir ponto selecionado (primário ou primeiro)
+        const initialSelectedPointId = primaryPoint?.id || (points.length > 0 ? points[0].id : null);
+        setSelectedPointId(initialSelectedPointId);
+        
+        // 6. Salvar no AsyncStorage
         try {
           await AsyncStorage.setItem('volunteer', JSON.stringify(formattedData));
+          await AsyncStorage.setItem('selectedPointId', initialSelectedPointId?.toString() || '');
           console.log('Dados do voluntário salvos no AsyncStorage');
         } catch (storageError) {
           console.error('Erro ao salvar no AsyncStorage:', storageError);
           // Continuar mesmo com erro, pois o estado já foi atualizado
         }
         
-        // 5. Atualizar o estado da aplicação
+        // 7. Atualizar o estado da aplicação
         setVolunteer(formattedData);
         
-        // 6. Criar sessão de autenticação
+        // 8. Criar sessão de autenticação
         try {
-          // Aqui você pode adicionar lógica para criar uma sessão de autenticação
-          // se estiver usando autenticação por token JWT, por exemplo
           console.log('Sessão de autenticação criada com sucesso');
         } catch (authError) {
           console.error('Erro ao criar sessão de autenticação:', authError);
-          // Não falhar o login por causa disso, apenas registrar o erro
         }
         
         return true;
@@ -419,39 +429,33 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         try {
           console.log('Tentando salvar dados básicos do voluntário...');
           
+          const defaultPoint: Point = {
+            id: 0,
+            name: 'Carregando informações...',
+            river: {
+              id: 0,
+              name: 'Carregando...',
+              city: {
+                id: 0,
+                name: 'Carregando...'
+              }
+            },
+            is_primary: false
+          };
+          
           const basicData: Volunteer = {
             id: data.id,
             code: data.code || '',
             nome: data.nome || 'Voluntário',
-            point_id: data.point_id || 0,
             is_active: data.is_active !== undefined ? data.is_active : true,
-            point: data.point_id ? {
-              id: data.point_id,
-              name: 'Carregando informações...',
-              river: {
-                id: 0,
-                name: 'Carregando...',
-                city: {
-                  id: 0,
-                  name: 'Carregando...'
-                }
-              }
-            } : { 
-              id: 0, 
-              name: 'Ponto não informado', 
-              river: { 
-                id: 0, 
-                name: 'Rio não informado', 
-                city: { 
-                  id: 0, 
-                  name: 'Cidade não informada' 
-                } 
-              } 
-            }
+            points: [],
+            point: defaultPoint,
+            point_id: undefined
           };
           
           await AsyncStorage.setItem('volunteer', JSON.stringify(basicData));
           setVolunteer(basicData);
+          setSelectedPointId(null);
           
           // Ainda retornar true para permitir o login, mas com dados limitados
           return true;
@@ -484,6 +488,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       console.log('Limpando AsyncStorage...');
       await AsyncStorage.multiRemove([
         'volunteer',
+        'selectedPointId',
         'supabase.auth.token',
         'supabase.auth.admin',
         'supabase.auth.user',
@@ -494,6 +499,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       
       // 3. Limpar estado do contexto
       setVolunteer(null);
+      setSelectedPointId(null);
       setErrorMessage('');
       
       // 4. No web/PWA, opcionalmente forçar reload para garantir limpeza visual de sessão
@@ -531,6 +537,8 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
   const value: AuthContextType = {
     volunteer,
+    selectedPointId,
+    setSelectedPointId,
     isAuthenticated: !!volunteer,
     errorMessage,
     login,
@@ -543,6 +551,22 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       {children}
     </AuthContext.Provider>
   );
+};
+
+// Helper function para obter o ponto atual (selecionado ou primário)
+export const getCurrentPoint = (volunteer: Volunteer | null, selectedPointId: number | null): Point | null => {
+  if (!volunteer || !volunteer.points || volunteer.points.length === 0) {
+    return null;
+  }
+  
+  // Se houver ponto selecionado, retornar ele
+  if (selectedPointId) {
+    const selected = volunteer.points.find(p => p.id === selectedPointId);
+    if (selected) return selected;
+  }
+  
+  // Caso contrário, retornar o ponto primário ou o primeiro
+  return volunteer.points.find(p => p.is_primary) || volunteer.points[0] || null;
 };
 
 export { AuthContext };
