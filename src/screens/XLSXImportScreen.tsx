@@ -280,18 +280,12 @@ export default function XLSXImportScreen() {
       console.log('Primeira linha:', processedRows[0]);
       
       if (isWeb) {
-        // No web, mostrar mensagem e navegar
-        const message = processedRows.length === 1 
-          ? `Arquivo processado com sucesso!\n\nEncontrada ${processedRows.length} coleta válida.\n\nAbrindo tela de fatores ambientais...`
-          : `Arquivo processado com sucesso!\n\nEncontradas ${processedRows.length} coletas válidas.\n\nAbrindo tela de fatores ambientais...`;
-        
-        window.alert(message);
-        
-        // Aguardar um pouco antes de navegar para dar tempo do alerta aparecer
+        // No web, navegar diretamente (sem alerta bloqueante)
+        console.log('Navegando para fatores ambientais (web)...');
+        // Aguardar um pouco para garantir que o estado foi atualizado
         setTimeout(() => {
-          console.log('Navegando para fatores ambientais (web)...');
           startEnvironmentalFactors(processedRows[0], 0, processedRows.length);
-        }, 500);
+        }, 100);
       } else {
         // No mobile, mostrar alerta primeiro
         if (processedRows.length === 1) {
@@ -364,7 +358,7 @@ export default function XLSXImportScreen() {
       (navigation as any).navigate('EnvironmentalFactors', {
       measuredAt: row.measuredAt,
       parameters: row.parameters,
-      totalRows: totalRowsParam,
+      totalRows: totalRows,
       currentRow: rowIndex + 1,
       onFactorsComplete: (factors: any) => {
         console.log(`Fatores ambientais completados para linha ${rowIndex + 1}:`, factors);
