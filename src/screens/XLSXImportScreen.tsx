@@ -157,6 +157,13 @@ export default function XLSXImportScreen() {
       return;
     }
 
+    // Verificar se há um ponto selecionado
+    const currentPoint = getCurrentPoint(volunteer, selectedPointId);
+    if (!currentPoint?.id) {
+      showAlert('Erro', 'Selecione um ponto de coleta antes de processar o arquivo');
+      return;
+    }
+
     setProcessing(true);
 
     try {
@@ -262,23 +269,44 @@ export default function XLSXImportScreen() {
       setCurrentRowIndex(0);
       setReadyToSync(false);
       
-      // Usar setTimeout para garantir que o estado foi limpo
-      setTimeout(() => {
-        setProcessedData(processedRows);
+      // Definir dados processados primeiro
+      setProcessedData(processedRows);
+      
+      // Aguardar um pouco para garantir que o estado foi atualizado
+      await new Promise(resolve => setTimeout(resolve, 300));
 
-        if (isWeb) {
-          // No web, seguir direto para fatores ambientais da primeira linha
+      // Navegar para fatores ambientais
+      console.log('Dados processados, total de linhas:', processedRows.length);
+      console.log('Primeira linha:', processedRows[0]);
+      
+      if (isWeb) {
+        // No web, mostrar mensagem e navegar
+        const message = processedRows.length === 1 
+          ? `Arquivo processado com sucesso!\n\nEncontrada ${processedRows.length} coleta válida.\n\nAbrindo tela de fatores ambientais...`
+          : `Arquivo processado com sucesso!\n\nEncontradas ${processedRows.length} coletas válidas.\n\nAbrindo tela de fatores ambientais...`;
+        
+        window.alert(message);
+        
+        // Aguardar um pouco antes de navegar para dar tempo do alerta aparecer
+        setTimeout(() => {
+          console.log('Navegando para fatores ambientais (web)...');
           startEnvironmentalFactors(processedRows[0], 0, processedRows.length);
-          return;
-        }
-
+        }, 500);
+      } else {
+        // No mobile, mostrar alerta primeiro
         if (processedRows.length === 1) {
           Alert.alert(
             'Arquivo Processado',
             `Encontrada ${processedRows.length} coleta válida. Agora responda os fatores ambientais.`,
             [
               { text: 'Cancelar', style: 'cancel' },
-              { text: 'Continuar', onPress: () => startEnvironmentalFactors(processedRows[0], 0, processedRows.length) },
+              { 
+                text: 'Continuar', 
+                onPress: () => {
+                  console.log('Navegando para fatores ambientais (mobile)...');
+                  startEnvironmentalFactors(processedRows[0], 0, processedRows.length);
+                }
+              },
             ]
           );
         } else {
@@ -287,11 +315,17 @@ export default function XLSXImportScreen() {
             `Encontradas ${processedRows.length} coletas válidas. Você responderá os fatores ambientais para cada coleta individualmente.`,
             [
               { text: 'Cancelar', style: 'cancel' },
-              { text: 'Continuar', onPress: () => startEnvironmentalFactors(processedRows[0], 0, processedRows.length) },
+              { 
+                text: 'Continuar', 
+                onPress: () => {
+                  console.log('Navegando para fatores ambientais (mobile)...');
+                  startEnvironmentalFactors(processedRows[0], 0, processedRows.length);
+                }
+              },
             ]
           );
         }
-      }, 100);
+      }
 
     } catch (error) {
       console.error('Erro ao processar arquivo:', error);
@@ -306,18 +340,28 @@ export default function XLSXImportScreen() {
     rowIndex: number,
     totalRowsOverride?: number
   ) => {
-    console.log(`Iniciando fatores ambientais para linha ${rowIndex + 1}/${processedData.length}`);
+    // Usar totalRowsOverride se fornecido, senão usar processedData.length
+    const totalRows = typeof totalRowsOverride === 'number' ? totalRowsOverride : processedData.length;
+    
+    console.log(`Iniciando fatores ambientais para linha ${rowIndex + 1}/${totalRows}`);
     console.log('Dados da linha:', {
       measuredAt: row.measuredAt,
       parametersCount: row.parameters.length,
-      totalRows: processedData.length,
+      totalRows: totalRows,
       currentRow: rowIndex + 1
     });
 
-    // Navegar para fatores ambientais com os dados da coleta específica
-    const totalRowsParam = typeof totalRowsOverride === 'number' ? totalRowsOverride : processedData.length;
+    // Verificar se há um ponto selecionado antes de navegar
+    const currentPoint = getCurrentPoint(volunteer, selectedPointId);
+    if (!currentPoint?.id) {
+      showAlert('Erro', 'Selecione um ponto de coleta antes de continuar');
+      return;
+    }
 
-    (navigation as any).navigate('EnvironmentalFactors', {
+    // Navegar para fatores ambientais com os dados da coleta específica
+    try {
+      console.log('Tentando navegar para EnvironmentalFactors...');
+      (navigation as any).navigate('EnvironmentalFactors', {
       measuredAt: row.measuredAt,
       parameters: row.parameters,
       totalRows: totalRowsParam,
@@ -385,6 +429,11 @@ export default function XLSXImportScreen() {
         });
       },
     });
+      console.log('Navegação para EnvironmentalFactors iniciada com sucesso');
+    } catch (navError) {
+      console.error('Erro ao navegar para EnvironmentalFactors:', navError);
+      showAlert('Erro', 'Não foi possível abrir a tela de fatores ambientais. Tente novamente.');
+    }
   };
 
   const syncToSupabase = async () => {
@@ -555,7 +604,14 @@ export default function XLSXImportScreen() {
   if (isWeb) {
     return (
       <View style={styles.webRoot}>
-      <ScrollView style={styles.webScroll} contentContainerStyle={styles.scrollContent} keyboardShouldPersistTaps="handled">
+      <ScrollView 
+        style={styles.webScroll} 
+        contentContainerStyle={styles.scrollContent} 
+        keyboardShouldPersistTaps="handled"
+        showsVerticalScrollIndicator={true}
+        alwaysBounceVertical={false}
+        bounces={false}
+      >
         <View style={styles.header}>
         <Text style={styles.title}>Importar Dados da Sonda</Text>
         <Text style={styles.subtitle}>
@@ -692,7 +748,10 @@ export default function XLSXImportScreen() {
         style={styles.scroll}
         contentContainerStyle={styles.scrollContent}
         keyboardShouldPersistTaps="handled"
-        scrollEnabled
+        scrollEnabled={true}
+        showsVerticalScrollIndicator={true}
+        alwaysBounceVertical={false}
+        bounces={false}
       >
         <View style={styles.header}>
         <Text style={styles.title}>Importar Dados da Sonda</Text>
@@ -823,19 +882,22 @@ const styles = StyleSheet.create({
   },
   scrollContent: {
     flexGrow: 1,
-    paddingBottom: 80,
+    paddingBottom: 100,
+    minHeight: '100%',
   },
   scroll: {
     flex: 1,
   },
   webScroll: {
     flex: 1,
-    minHeight: 0,
     backgroundColor: '#f5f5f5',
+    width: '100%',
   },
   webRoot: {
     flex: 1,
     backgroundColor: '#f5f5f5',
+    width: '100%',
+    height: '100%',
   },
   webToast: {
     position: 'absolute',
