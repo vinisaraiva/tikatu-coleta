@@ -547,15 +547,26 @@ export default function XLSXImportScreen() {
 
       console.log('Arquivo enviado para storage com sucesso:', uploadResult.filePath);
 
-      // Excluir arquivo local após upload bem-sucedido (apenas nativo)
+      // Excluir arquivo local após sincronização bem-sucedida (apenas mobile/nativo)
+      let fileDeleted = false;
       if (!isWeb) {
         try {
           const fileUri = selectedFile.assets![0].uri;
-          await FileSystem.deleteAsync(fileUri);
-          console.log('Arquivo local excluído com sucesso');
+          console.log('Tentando excluir arquivo local:', fileUri);
+          
+          // Verificar se o arquivo existe antes de tentar excluir
+          const fileInfo = await FileSystem.getInfoAsync(fileUri);
+          if (fileInfo.exists) {
+            await FileSystem.deleteAsync(fileUri, { idempotent: true });
+            fileDeleted = true;
+            console.log('Arquivo local excluído com sucesso');
+          } else {
+            console.log('Arquivo já não existe ou foi movido');
+          }
         } catch (deleteError) {
           console.warn('Erro ao excluir arquivo local:', deleteError);
           // Não falhar a sincronização por erro na exclusão
+          // O arquivo pode ter sido movido ou já excluído pelo sistema
         }
       }
 
@@ -570,9 +581,14 @@ export default function XLSXImportScreen() {
         setReadyToSync(false);
         setTimeout(() => navigation.goBack(), 1200);
       } else {
+        // Mensagem de sucesso incluindo informação sobre exclusão do arquivo
+        const successMessage = fileDeleted
+          ? `${processedData.length} coletas foram sincronizadas com o Supabase e o arquivo XLSX modificado foi enviado para o storage com sucesso!\n\n📱 O arquivo local foi excluído do dispositivo.`
+          : `${processedData.length} coletas foram sincronizadas com o Supabase e o arquivo XLSX modificado foi enviado para o storage com sucesso!`;
+        
         Alert.alert(
           'Sincronização Concluída',
-          `${processedData.length} coletas foram sincronizadas com o Supabase e o arquivo XLSX modificado foi enviado para o storage com sucesso!`,
+          successMessage,
           [
             {
               text: 'OK',
