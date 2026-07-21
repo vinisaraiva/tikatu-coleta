@@ -64,18 +64,20 @@ export default function LoginScreen() {
           <Text style={styles.subtitle}>Sistema de Coleta de Dados de Qualidade da Água</Text>
 
           <View style={styles.form}>
+            <Text style={styles.label}>Código do Voluntário</Text>
             <TextInput
               style={styles.input}
-              placeholder="Código do Voluntário"
+              placeholder="Ex.: VOL123456"
               value={code}
               onChangeText={setCode}
               autoCapitalize="none"
               autoCorrect={false}
             />
 
+            <Text style={styles.label}>Senha</Text>
             <TextInput
               style={styles.input}
-              placeholder="Senha"
+              placeholder="Digite sua senha"
               value={password}
               onChangeText={setPassword}
               secureTextEntry
@@ -159,6 +161,13 @@ const styles = StyleSheet.create({
   form: {
     marginBottom: 30,
   },
+  label: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: '#334155',
+    marginBottom: 6,
+    marginLeft: 2,
+  },
   input: {
     backgroundColor: '#ffffff',
     borderWidth: 1,
@@ -196,12 +205,12 @@ const styles = StyleSheet.create({
     fontWeight: 'bold',
   },
   infoContainer: {
-    backgroundColor: '#f1f5f9',
+    backgroundColor: '#eff6ff',
     padding: 20,
     borderRadius: 12,
     marginBottom: 20,
-    borderLeftWidth: 4,
-    borderLeftColor: '#0066CC',
+    borderWidth: 1,
+    borderColor: '#bfdbfe',
     shadowColor: '#000',
     shadowOffset: {
       width: 0,
@@ -241,8 +250,8 @@ const styles = StyleSheet.create({
   errorCard: {
     width: '100%',
     backgroundColor: '#FEE2E2',
-    borderLeftWidth: 4,
-    borderLeftColor: '#DC2626',
+    borderWidth: 1,
+    borderColor: '#fca5a5',
     borderRadius: 8,
     padding: 16,
     shadowColor: '#000',

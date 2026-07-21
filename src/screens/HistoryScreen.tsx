@@ -85,9 +85,12 @@ export default function HistoryScreen() {
               {reading.reading_values && reading.reading_values.length > 0 && (
                 <View style={styles.parametersContainer}>
                   {reading.reading_values.map((rv: any) => (
-                    <Text key={rv.id} style={styles.parameter}>
-                      {rv.parameter?.description || 'Parâmetro'}: {rv.value}
-                    </Text>
+                    <View key={rv.id} style={styles.paramChip}>
+                      <Text style={styles.paramName}>
+                        {rv.parameter?.description || 'Parâmetro'}
+                      </Text>
+                      <Text style={styles.paramValue}>{rv.value}</Text>
+                    </View>
                   ))}
                 </View>
               )}
@@ -122,7 +125,7 @@ const styles = StyleSheet.create({
   loadingText: {
     marginTop: 10,
     fontSize: 16,
-    color: '#666',
+    color: '#64748b',
   },
   emptyContainer: {
     padding: 40,
@@ -157,11 +160,27 @@ const styles = StyleSheet.create({
     marginBottom: 12,
   },
   parametersContainer: {
-    marginTop: 8,
+    marginTop: 4,
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 8,
   },
-  parameter: {
+  paramChip: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    backgroundColor: '#eff6ff',
+    borderRadius: 8,
+    paddingHorizontal: 10,
+    paddingVertical: 6,
+  },
+  paramName: {
+    fontSize: 13,
+    color: '#475569',
+  },
+  paramValue: {
     fontSize: 14,
-    color: '#64748b',
-    marginBottom: 4,
+    fontWeight: '700',
+    color: '#0f172a',
   },
 }); 

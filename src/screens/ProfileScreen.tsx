@@ -59,7 +59,7 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     padding: 20,
-    backgroundColor: '#f5f5f5',
+    backgroundColor: '#f8fafc',
   },
   title: {
     fontSize: 24,
@@ -70,7 +70,7 @@ const styles = StyleSheet.create({
   infoContainer: {
     backgroundColor: '#fff',
     padding: 20,
-    borderRadius: 10,
+    borderRadius: 12,
     shadowColor: '#000',
     shadowOffset: {
       width: 0,
@@ -83,19 +83,19 @@ const styles = StyleSheet.create({
   label: {
     fontSize: 16,
     fontWeight: 'bold',
-    color: '#333',
+    color: '#1e293b',
     marginTop: 15,
     marginBottom: 5,
   },
   value: {
     fontSize: 16,
-    color: '#666',
+    color: '#64748b',
     marginBottom: 10,
   },
   sectionTitle: {
     fontSize: 18,
     fontWeight: 'bold',
-    color: '#333',
+    color: '#1e293b',
     marginTop: 20,
     marginBottom: 15,
   },

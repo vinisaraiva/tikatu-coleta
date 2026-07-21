@@ -887,7 +887,7 @@ export default function XLSXImportScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#f5f5f5',
+    backgroundColor: '#f8fafc',
   },
   scrollContent: {
     flexGrow: 1,
@@ -899,12 +899,12 @@ const styles = StyleSheet.create({
   },
   webScroll: {
     flex: 1,
-    backgroundColor: '#f5f5f5',
+    backgroundColor: '#f8fafc',
     width: '100%',
   },
   webRoot: {
     flex: 1,
-    backgroundColor: '#f5f5f5',
+    backgroundColor: '#f8fafc',
     width: '100%',
     height: '100%',
   },
@@ -967,7 +967,7 @@ const styles = StyleSheet.create({
   sectionTitle: {
     fontSize: 18,
     fontWeight: 'bold',
-    color: '#333',
+    color: '#1e293b',
     marginBottom: 15,
   },
   selectButton: {
@@ -990,11 +990,11 @@ const styles = StyleSheet.create({
   fileName: {
     fontSize: 14,
     fontWeight: 'bold',
-    color: '#333',
+    color: '#1e293b',
   },
   fileSize: {
     fontSize: 12,
-    color: '#666',
+    color: '#64748b',
     marginTop: 5,
   },
   processSection: {
@@ -1053,7 +1053,7 @@ const styles = StyleSheet.create({
   },
   resultsSubtext: {
     fontSize: 14,
-    color: '#666',
+    color: '#64748b',
     marginTop: 5,
   },
   progressBar: {
@@ -1109,12 +1109,12 @@ const styles = StyleSheet.create({
   helpTitle: {
     fontSize: 16,
     fontWeight: 'bold',
-    color: '#333',
+    color: '#1e293b',
     marginBottom: 10,
   },
   helpText: {
     fontSize: 14,
-    color: '#666',
+    color: '#64748b',
     lineHeight: 20,
   },
   boldText: {

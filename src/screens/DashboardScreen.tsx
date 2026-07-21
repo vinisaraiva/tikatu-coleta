@@ -10,6 +10,7 @@ import {
   ActivityIndicator,
 } from 'react-native';
 import { useNavigation, useFocusEffect } from '@react-navigation/native';
+import { Ionicons } from '@expo/vector-icons';
 import { useAuth, getCurrentPoint } from '../contexts/AuthContext';
 import { supabase } from '../services/supabase';
 import PointSelector from '../components/PointSelector';
@@ -127,19 +128,29 @@ export default function DashboardScreen() {
 
       <View style={styles.actionsContainer}>
         <TouchableOpacity
-          style={styles.actionButton}
+          style={[styles.actionButton, styles.actionButtonPrimary]}
           onPress={() => navigation.navigate('XLSXImport' as never)}
+          activeOpacity={0.85}
         >
-          <Text style={styles.actionButtonText}>📊 Importar Dados da Sonda</Text>
-          <Text style={styles.actionButtonSubtext}>Upload do arquivo XLSX da sonda de coleta</Text>
+          <Ionicons name="cloud-upload-outline" size={26} color="#ffffff" style={styles.actionIcon} />
+          <View style={styles.actionTextGroup}>
+            <Text style={[styles.actionButtonText, styles.actionButtonTextPrimary]}>Importar Dados da Sonda</Text>
+            <Text style={[styles.actionButtonSubtext, styles.actionButtonSubtextPrimary]}>Upload do arquivo XLSX da sonda de coleta</Text>
+          </View>
+          <Ionicons name="chevron-forward" size={22} color="rgba(255,255,255,0.9)" />
         </TouchableOpacity>
 
         <TouchableOpacity
           style={styles.actionButton}
           onPress={() => navigation.navigate('History' as never)}
+          activeOpacity={0.85}
         >
-          <Text style={styles.actionButtonText}>📋 Histórico de Coletas</Text>
-          <Text style={styles.actionButtonSubtext}>Ver coletas anteriores</Text>
+          <Ionicons name="time-outline" size={26} color="#0066CC" style={styles.actionIcon} />
+          <View style={styles.actionTextGroup}>
+            <Text style={styles.actionButtonText}>Histórico de Coletas</Text>
+            <Text style={styles.actionButtonSubtext}>Ver coletas anteriores</Text>
+          </View>
+          <Ionicons name="chevron-forward" size={22} color="#94a3b8" />
         </TouchableOpacity>
       </View>
 
@@ -164,7 +175,7 @@ const styles = StyleSheet.create({
   loadingText: {
     marginTop: 10,
     fontSize: 16,
-    color: '#666',
+    color: '#64748b',
   },
   header: {
     backgroundColor: '#ffffff',
@@ -183,15 +194,15 @@ const styles = StyleSheet.create({
   },
   logoContainer: {
     alignItems: 'center',
-    marginBottom: 20,
-    paddingVertical: 15,
+    marginBottom: 14,
+    paddingVertical: 10,
     backgroundColor: '#f8fafc',
     borderRadius: 12,
     marginHorizontal: 20,
   },
   logo: {
-    width: 240,
-    height: 120,
+    width: 200,
+    height: 88,
   },
   welcomeText: {
     fontSize: 24,
@@ -255,8 +266,11 @@ const styles = StyleSheet.create({
   },
   actionButton: {
     backgroundColor: '#ffffff',
-    padding: 20,
+    padding: 18,
     borderRadius: 12,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 14,
     shadowColor: '#000',
     shadowOffset: {
       width: 0,
@@ -268,16 +282,32 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: '#e2e8f0',
   },
+  actionButtonPrimary: {
+    backgroundColor: '#0066CC',
+    borderColor: '#0066CC',
+  },
+  actionIcon: {
+    marginRight: 2,
+  },
+  actionTextGroup: {
+    flex: 1,
+  },
   actionButtonText: {
-    fontSize: 18,
+    fontSize: 17,
     fontWeight: 'bold',
     color: '#1e293b',
-    marginBottom: 8,
+    marginBottom: 4,
+  },
+  actionButtonTextPrimary: {
+    color: '#ffffff',
   },
   actionButtonSubtext: {
-    fontSize: 14,
+    fontSize: 13,
     color: '#64748b',
-    lineHeight: 20,
+    lineHeight: 18,
+  },
+  actionButtonSubtextPrimary: {
+    color: 'rgba(255, 255, 255, 0.88)',
   },
   logoutButton: {
     backgroundColor: '#ef4444',

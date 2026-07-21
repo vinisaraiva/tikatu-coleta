@@ -337,7 +337,7 @@ export default function EnvironmentalFactorsScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#f5f5f5',
+    backgroundColor: '#f8fafc',
   },
   scrollContent: {
     flexGrow: 1,
@@ -348,7 +348,7 @@ const styles = StyleSheet.create({
   },
   webScroll: {
     height: '100vh',
-    backgroundColor: '#f5f5f5',
+    backgroundColor: '#f8fafc',
   },
   header: {
     backgroundColor: '#0066CC',
@@ -399,7 +399,7 @@ const styles = StyleSheet.create({
   questionCard: {
     backgroundColor: '#fff',
     padding: 20,
-    borderRadius: 10,
+    borderRadius: 12,
     marginBottom: 15,
     shadowColor: '#000',
     shadowOffset: {
@@ -413,12 +413,12 @@ const styles = StyleSheet.create({
   questionText: {
     fontSize: 18,
     fontWeight: 'bold',
-    color: '#333',
+    color: '#1e293b',
     marginBottom: 8,
   },
   questionDescription: {
     fontSize: 14,
-    color: '#666',
+    color: '#64748b',
     marginBottom: 15,
   },
   answerContainer: {
@@ -440,7 +440,7 @@ const styles = StyleSheet.create({
   answerButtonText: {
     fontSize: 16,
     fontWeight: 'bold',
-    color: '#666',
+    color: '#64748b',
   },
   answerButtonTextSelected: {
     color: '#fff',
@@ -448,7 +448,7 @@ const styles = StyleSheet.create({
   observationsContainer: {
     backgroundColor: '#fff',
     padding: 20,
-    borderRadius: 10,
+    borderRadius: 12,
     marginBottom: 20,
     shadowColor: '#000',
     shadowOffset: {
@@ -462,12 +462,12 @@ const styles = StyleSheet.create({
   observationsLabel: {
     fontSize: 18,
     fontWeight: 'bold',
-    color: '#333',
+    color: '#1e293b',
     marginBottom: 8,
   },
   observationsDescription: {
     fontSize: 14,
-    color: '#666',
+    color: '#64748b',
     marginBottom: 15,
   },
   observationsInput: {
@@ -481,7 +481,7 @@ const styles = StyleSheet.create({
   submitButton: {
     backgroundColor: '#00AA44',
     padding: 18,
-    borderRadius: 10,
+    borderRadius: 12,
     alignItems: 'center',
     marginTop: 10,
   },
