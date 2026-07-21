@@ -12,6 +12,7 @@ import {
   Platform,
 } from 'react-native';
 import { useNavigation, useRoute } from '@react-navigation/native';
+import { Ionicons } from '@expo/vector-icons';
 import { useAuth } from '../contexts/AuthContext';
 import { EnvironmentalFactors } from '../services/collectionService';
 
@@ -190,9 +191,12 @@ export default function EnvironmentalFactorsScreen() {
             Responda as perguntas baseadas na sua observação do local
           </Text>
           {measuredAt && (
-            <Text style={styles.dateText}>
-              Data/Hora: {new Date(measuredAt).toLocaleString('pt-BR')}
-            </Text>
+            <View style={styles.dateBadge}>
+              <Ionicons name="calendar-outline" size={18} color="#ffffff" />
+              <Text style={styles.dateBadgeText}>
+                Coleta de {new Date(measuredAt).toLocaleString('pt-BR')}
+              </Text>
+            </View>
           )}
           {totalRows > 1 && (
             <View style={styles.progressContainer}>
@@ -270,9 +274,12 @@ export default function EnvironmentalFactorsScreen() {
             Responda as perguntas baseadas na sua observação do local
           </Text>
           {measuredAt && (
-            <Text style={styles.dateText}>
-              Data/Hora: {new Date(measuredAt).toLocaleString('pt-BR')}
-            </Text>
+            <View style={styles.dateBadge}>
+              <Ionicons name="calendar-outline" size={18} color="#ffffff" />
+              <Text style={styles.dateBadgeText}>
+                Coleta de {new Date(measuredAt).toLocaleString('pt-BR')}
+              </Text>
+            </View>
           )}
           {totalRows > 1 && (
             <View style={styles.progressContainer}>
@@ -371,6 +378,22 @@ const styles = StyleSheet.create({
     fontSize: 14,
     color: '#fff',
     opacity: 0.8,
+  },
+  dateBadge: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+    alignSelf: 'flex-start',
+    backgroundColor: 'rgba(255, 255, 255, 0.18)',
+    borderRadius: 10,
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+    marginTop: 4,
+  },
+  dateBadgeText: {
+    color: '#ffffff',
+    fontSize: 15,
+    fontWeight: '700',
   },
   progressContainer: {
     marginTop: 10,
