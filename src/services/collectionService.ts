@@ -1,4 +1,5 @@
 import { supabase } from './supabase';
+import { callFunction, getSessionToken } from './api';
 
 export interface EnvironmentalFactors {
   cor_alterada: boolean | null;
@@ -21,137 +22,59 @@ export interface ReadingData {
 
 export class CollectionService {
   /**
-   * Insere uma nova coleta no banco de dados
+   * Insere uma nova coleta via Edge Function (validação de sessão no servidor).
    */
   static async insertReading(readingData: ReadingData) {
-    try {
-      console.log('Inserindo reading com point_id:', readingData.point_id);
-
-      // 1. Inserir registro principal na tabela readings
-      const { data: reading, error: readingError } = await supabase
-        .from('readings')
-        .insert({
-          point_id: readingData.point_id,
-          measured_at: readingData.measured_at,
-          cor_alterada: readingData.factors.cor_alterada,
-          cheiro_alterado: readingData.factors.cheiro_alterado,
-          chuva_48h: readingData.factors.chuva_48h,
-          residuos_visiveis: readingData.factors.residuos_visiveis,
-          volume_reduzido: readingData.factors.volume_reduzido,
-          context: {
-            observacoes: readingData.factors.observacoes,
-          },
-        })
-        .select()
-        .single();
-
-      if (readingError) {
-        console.error('Erro ao inserir reading:', readingError);
-        throw new Error('Erro ao salvar coleta principal');
-      }
-
-      console.log('Reading inserido com sucesso:', reading);
-
-      // 2. Se houver parâmetros, inserir na tabela reading_values
-      if (readingData.parameters && readingData.parameters.length > 0) {
-        const values = readingData.parameters.map(param => ({
-          reading_id: reading.id,
-          parameter_id: param.parameter_id,
-          value: param.value,
-        }));
-
-        const { error: valuesError } = await supabase
-          .from('reading_values')
-          .insert(values);
-
-        if (valuesError) {
-          console.error('Erro ao inserir reading_values:', valuesError);
-          throw new Error('Erro ao salvar valores dos parâmetros');
-        }
-
-        console.log('Reading values inseridos com sucesso');
-      }
-
-      return reading;
-    } catch (error) {
-      console.error('Erro no CollectionService.insertReading:', error);
-      throw error;
+    const token = await getSessionToken();
+    if (!token) {
+      throw new Error('Sessão expirada. Faça login novamente.');
     }
+
+    const result = await callFunction<{ success: boolean; reading_id: number }>(
+      'volunteer-submit',
+      { token, reading: readingData }
+    );
+
+    return { id: result.reading_id };
   }
 
   /**
-   * Verifica se já existe uma coleta para o mesmo ponto e horário
-   */
-  static async checkDuplicateReading(pointId: number, measuredAt: string) {
-    try {
-      const { data, error } = await supabase
-        .from('readings')
-        .select('id')
-        .eq('point_id', pointId)
-        .eq('measured_at', measuredAt)
-        .maybeSingle();
-
-      if (error) {
-        console.error('Erro ao verificar duplicata:', error);
-        return false;
-      }
-
-      return !!data;
-    } catch (error) {
-      console.error('Erro no checkDuplicateReading:', error);
-      return false;
-    }
-  }
-
-  /**
-   * Busca coletas de um ponto específico
+   * Busca coletas de um ponto específico (leitura pública).
    */
   static async getReadingsByPoint(pointId: number, limit = 50) {
-    try {
-      const { data, error } = await supabase
-        .from('readings')
-        .select(`
+    const { data, error } = await supabase
+      .from('readings')
+      .select(`
+        *,
+        reading_values(
           *,
-          reading_values(
-            *,
-            parameter:parameters(*)
-          )
-        `)
-        .eq('point_id', pointId)
-        .order('measured_at', { ascending: false })
-        .limit(limit);
+          parameter:parameters(*)
+        )
+      `)
+      .eq('point_id', pointId)
+      .order('measured_at', { ascending: false })
+      .limit(limit);
 
-      if (error) {
-        console.error('Erro ao buscar coletas:', error);
-        throw error;
-      }
-
-      return data;
-    } catch (error) {
-      console.error('Erro no getReadingsByPoint:', error);
+    if (error) {
+      console.error('Erro ao buscar coletas:', error);
       throw error;
     }
+    return data;
   }
 
   /**
-   * Busca parâmetros disponíveis
+   * Busca parâmetros disponíveis (leitura pública).
    */
   static async getParameters() {
-    try {
-      const { data, error } = await supabase
-        .from('parameters')
-        .select('*')
-        .order('description');
+    const { data, error } = await supabase
+      .from('parameters')
+      .select('*')
+      .order('description');
 
-      if (error) {
-        console.error('Erro ao buscar parâmetros:', error);
-        throw error;
-      }
-
-      return data;
-    } catch (error) {
-      console.error('Erro no getParameters:', error);
+    if (error) {
+      console.error('Erro ao buscar parâmetros:', error);
       throw error;
     }
+    return data;
   }
-} 
+}
