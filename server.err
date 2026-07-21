@@ -1,0 +1,11 @@
+npm warn Unknown project config "node-linker". This will stop working in the next major version of npm.
+CommandError: It looks like you're trying to use web support but don't have the required
+dependencies installed.
+
+Install react-dom@19.0.0 by running:
+
+npx expo install react-dom
+
+If you're not using web, please ensure you remove the "web" string from the
+platforms array in the project Expo config.
+

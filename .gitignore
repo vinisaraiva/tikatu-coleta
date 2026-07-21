@@ -43,5 +43,7 @@ coverage/
 
 # Build outputs
 build/
+dist/
 *.tgz
 *.tar.gz
+

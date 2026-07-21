@@ -6,7 +6,8 @@
     "start": "expo start",
     "android": "expo run:android",
     "ios": "expo run:ios",
-    "web": "expo start --web"
+    "web": "expo start --web",
+    "build:web": "expo export --platform web && node scripts/generate-manifest.js"
   },
   "dependencies": {
     "@expo/metro-runtime": "~5.0.4",
@@ -25,6 +26,7 @@
     "expo-status-bar": "~2.2.3",
     "expo-updates": "~0.28.17",
     "react": "19.1.1",
+    "react-dom": "^19.1.1",
     "react-hook-form": "^7.62.0",
     "react-native": "0.79.5",
     "react-native-gesture-handler": "~2.24.0",

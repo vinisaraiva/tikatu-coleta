@@ -37,11 +37,6 @@ export const getSupabase = (): SupabaseClient => {
     
     if (isDev) {
       console.log('Cliente Supabase inicializado com sucesso');
-      
-      // Adicionar listeners para debug
-      supabaseInstance.auth.onAuthStateChange((event, session) => {
-        console.log('Auth state changed:', event, session);
-      });
     }
   }
   

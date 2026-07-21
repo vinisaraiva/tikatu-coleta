@@ -450,7 +450,6 @@ export default function XLSXImportScreen() {
       const currentPoint = getCurrentPoint(volunteer, selectedPointId);
       
       console.log('Dados do voluntário antes da sincronização:');
-      console.log('Volunteer:', volunteer);
       console.log('Current Point:', currentPoint);
 
       if (!currentPoint?.id) {
