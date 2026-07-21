@@ -25,7 +25,8 @@ function arrayBufferToBase64(buffer: ArrayBuffer): string {
 
 /**
  * Envia o arquivo XLSX da coleta para o storage via Edge Function.
- * O nome do arquivo DEVE seguir o padrão: YYYYMMDD_HHMMSS_coleta.xlsx
+ * O nome final do arquivo é gerado no servidor (padrão AAAAMMDD_HHMMSS_coleta.xlsx),
+ * então o nome informado aqui é apenas indicativo.
  */
 export const uploadVolunteerFile = async (
   _volunteerCode: string, // mantido por compatibilidade; o servidor usa o code da sessão
@@ -36,13 +37,6 @@ export const uploadVolunteerFile = async (
     const token = await getSessionToken();
     if (!token) {
       return { success: false, message: 'Sessão expirada. Faça login novamente.' };
-    }
-
-    if (!/^\d{8}_\d{6}_coleta\.xlsx$/.test(fileName)) {
-      return {
-        success: false,
-        message: 'Nome de arquivo inválido (esperado: AAAAMMDD_HHMMSS_coleta.xlsx)',
-      };
     }
 
     if (fileBuffer.byteLength > 10 * 1024 * 1024) {
