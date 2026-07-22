@@ -18,6 +18,7 @@ import { useAuth, getCurrentPoint } from '../contexts/AuthContext';
 import PointSelector from '../components/PointSelector';
 import { CollectionService } from '../services/collectionService';
 import { uploadVolunteerFile } from '../services/uploadService';
+import { isCollectionSynced, markCollectionSynced } from '../services/syncedCollections';
 
 interface XLSXRow {
   ID: string;
@@ -261,7 +262,51 @@ export default function XLSXImportScreen() {
 
       if (processedRows.length === 0) {
         Alert.alert('Erro', 'Nenhum dado válido encontrado no arquivo');
+        setProcessing(false);
         return;
+      }
+
+      // Pular coletas ja sincronizadas neste dispositivo (evita reperguntar/reenviar).
+      // Chave = ponto + data/hora, a mesma da trava anti-duplicidade do banco.
+      let jaSincronizadas = 0;
+      for (let i = processedRows.length - 1; i >= 0; i--) {
+        const mAt = processedRows[i].measuredAt;
+        let sincronizada = false;
+        try {
+          // 1. memoria local (rapida, funciona offline)
+          sincronizada = await isCollectionSynced(currentPoint.id, mAt);
+          // 2. se nao achou local, confirma no banco (cobre envios antigos / outro aparelho)
+          if (!sincronizada) {
+            sincronizada = await CollectionService.existsReading(currentPoint.id, mAt);
+            if (sincronizada) {
+              await markCollectionSynced(currentPoint.id, mAt); // cacheia para as proximas
+            }
+          }
+        } catch {
+          // em caso de falha, mantem a linha (o servidor ainda deduplica no envio)
+        }
+        if (sincronizada) {
+          processedRows.splice(i, 1);
+          jaSincronizadas++;
+        }
+      }
+
+      if (processedRows.length === 0) {
+        showAlert(
+          'Tudo sincronizado',
+          'Todas as coletas deste arquivo já foram enviadas neste dispositivo. Nada novo para sincronizar.'
+        );
+        setProcessing(false);
+        return;
+      }
+
+      if (jaSincronizadas > 0) {
+        const plural = processedRows.length > 1 ? 's' : '';
+        showAlert(
+          'Leituras pendentes',
+          `${jaSincronizadas} leitura(s) já sincronizada(s) foram ignoradas. ` +
+          `${processedRows.length} leitura${plural} pendente${plural} — responda as perguntas a seguir.`
+        );
       }
 
       // Limpar estado anterior e definir novos dados
@@ -468,6 +513,8 @@ export default function XLSXImportScreen() {
 
         console.log(`Inserindo reading ${i + 1}/${processedData.length} com dados:`, readingData);
         await CollectionService.insertReading(readingData);
+        // Registrar localmente que esta coleta ja foi enviada (evita reperguntar/reenviar)
+        await markCollectionSynced(currentPoint.id, row.measuredAt);
       }
 
       // Modificar o arquivo XLSX original com todos os fatores ambientais

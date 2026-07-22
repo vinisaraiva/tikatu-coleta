@@ -63,6 +63,26 @@ export class CollectionService {
   }
 
   /**
+   * Verifica se já existe uma coleta para este ponto e horário no banco.
+   * Usado para não repetir perguntas/envio de coletas já sincronizadas
+   * (inclusive as enviadas antes desta versão ou de outro dispositivo).
+   */
+  static async existsReading(pointId: number, measuredAt: string): Promise<boolean> {
+    try {
+      const { data, error } = await supabase
+        .from('readings')
+        .select('id')
+        .eq('point_id', pointId)
+        .eq('measured_at', measuredAt)
+        .maybeSingle();
+      if (error) return false;
+      return !!data;
+    } catch {
+      return false;
+    }
+  }
+
+  /**
    * Busca parâmetros disponíveis (leitura pública).
    */
   static async getParameters() {
