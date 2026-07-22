@@ -152,6 +152,22 @@ export default function XLSXImportScreen() {
     return isNaN(num) ? null : num;
   };
 
+  // A sonda grava a data/hora em HORA LOCAL (ex.: "2023-08-21 10:27:12").
+  // Convertemos para UTC verdadeiro (ISO) para ficar consistente com as sondas
+  // automaticas e com a exibicao (que converte UTC -> local). Assim a hora
+  // aparece correta no app e no site, sem o deslocamento de fuso.
+  const sondaDateToUtcIso = (raw: string): string => {
+    if (!raw) return raw;
+    const m = /^(\d{4})-(\d{2})-(\d{2})[ T](\d{2}):(\d{2})(?::(\d{2}))?/.exec(String(raw).trim());
+    if (!m) return raw; // formato inesperado: envia como veio (fallback)
+    const [, y, mo, d, h, mi, s] = m;
+    const local = new Date(
+      Number(y), Number(mo) - 1, Number(d), Number(h), Number(mi), Number(s || '0')
+    );
+    if (isNaN(local.getTime())) return raw;
+    return local.toISOString();
+  };
+
   const processXLSXFile = async () => {
     if (!selectedFile || selectedFile.canceled) {
       showAlert('Erro', 'Nenhum arquivo selecionado');
@@ -244,7 +260,7 @@ export default function XLSXImportScreen() {
 
         if (parameters.length > 0) {
           processedRows.push({
-            measuredAt: row.Date,
+            measuredAt: sondaDateToUtcIso(row.Date),
             parameters: parameters,
             originalRow: row,
           });
