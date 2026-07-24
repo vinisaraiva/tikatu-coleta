@@ -642,28 +642,28 @@ export default function XLSXImportScreen() {
           ? `${processedData.length} coletas foram sincronizadas com o Supabase e o arquivo XLSX modificado foi enviado para o storage com sucesso!\n\n📱 O arquivo local foi excluído do dispositivo.`
           : `${processedData.length} coletas foram sincronizadas com o Supabase e o arquivo XLSX modificado foi enviado para o storage com sucesso!`;
         
-        Alert.alert(
-          'Sincronização Concluída',
-          successMessage,
-          [
-            {
-              text: 'OK',
-              onPress: () => {
-                // Limpar estado
-                setSelectedFile(null);
-                setProcessedData([]);
-                setCurrentRowIndex(0);
-                setReadyToSync(false);
-                navigation.goBack();
-              },
-            },
-          ]
-        );
+        const limparEVoltar = () => {
+          setSelectedFile(null);
+          setProcessedData([]);
+          setCurrentRowIndex(0);
+          setReadyToSync(false);
+          navigation.goBack();
+        };
+
+        if (isWeb && typeof window !== 'undefined') {
+          // No PWA/web o Alert.alert nao aparece: usa window.alert e limpa direto.
+          try { window.alert(`Sincronização Concluída\n\n${successMessage}`); } catch {}
+          limparEVoltar();
+        } else {
+          Alert.alert('Sincronização Concluída', successMessage, [
+            { text: 'OK', onPress: limparEVoltar },
+          ]);
+        }
       }
 
     } catch (error) {
       console.error('Erro na sincronização:', error);
-      Alert.alert('Erro', 'Erro ao sincronizar dados. Tente novamente.');
+      showAlert('Erro', 'Erro ao sincronizar dados. Tente novamente.');
     } finally {
       setLoading(false);
     }

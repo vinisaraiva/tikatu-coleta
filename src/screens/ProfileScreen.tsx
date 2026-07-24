@@ -1,6 +1,7 @@
 import React from 'react';
 import { View, Text, StyleSheet, ScrollView } from 'react-native';
 import { useAuth, getCurrentPoint } from '../contexts/AuthContext';
+import { APP_VERSION } from '../services/appUpdate';
 
 export default function ProfileScreen() {
   const { volunteer, selectedPointId } = useAuth();
@@ -51,6 +52,8 @@ export default function ProfileScreen() {
           </>
         )}
       </View>
+
+      <Text style={styles.versionText}>Versão {APP_VERSION}</Text>
     </ScrollView>
   );
 }
@@ -142,4 +145,11 @@ const styles = StyleSheet.create({
     fontSize: 14,
     color: '#64748b',
   },
-}); 
+  versionText: {
+    textAlign: 'center',
+    color: '#94a3b8',
+    fontSize: 12,
+    marginTop: 16,
+    marginBottom: 24,
+  },
+});
