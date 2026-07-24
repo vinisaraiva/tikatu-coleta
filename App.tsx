@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useEffect } from 'react';
 import { NavigationContainer } from '@react-navigation/native';
 import { createStackNavigator } from '@react-navigation/stack';
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
@@ -20,6 +20,9 @@ import { AuthProvider, useAuth } from './src/contexts/AuthContext';
 
 // Components
 import InstallPrompt from './src/components/InstallPrompt';
+
+// Auto-atualizacao do PWA (forca a versao nova sem derrubar o login)
+import { checarAtualizacao } from './src/services/appUpdate';
 
 const Stack = createStackNavigator();
 const Tab = createBottomTabNavigator();
@@ -115,6 +118,11 @@ function AppNavigator() {
 }
 
 export default function App() {
+  useEffect(() => {
+    // No arranque, verifica se ha versao nova e forca a atualizacao se preciso.
+    checarAtualizacao();
+  }, []);
+
   return (
     <AuthProvider>
       <AppNavigator />
