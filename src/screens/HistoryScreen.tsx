@@ -80,7 +80,7 @@ export default function HistoryScreen() {
           {readings.map((reading) => (
             <View key={reading.id} style={styles.readingCard}>
               <Text style={styles.readingDate}>
-                {new Date(reading.measured_at).toLocaleString('pt-BR', { timeZone: 'UTC' })}
+                {new Date(reading.measured_at).toLocaleString('pt-BR')}
               </Text>
               {reading.reading_values && reading.reading_values.length > 0 && (
                 <View style={styles.parametersContainer}>
