@@ -3,7 +3,7 @@ export default {
     entryPoint: "./index.ts",
     name: "Tikatu Coleta",
     slug: "tikatu-coleta",
-    version: "1.0.2",
+    version: "1.0.3",
     orientation: "portrait",
     icon: "./assets/imagem-home.png",
     userInterfaceStyle: "light",

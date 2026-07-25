@@ -2,22 +2,24 @@ import { Platform } from 'react-native';
 import { getSupabase } from './supabase';
 
 // =====================================================================
-// Auto-atualizacao do PWA (forca pegar a versao nova, sem derrubar o login)
+// Auto-atualizacao do PWA — versao GENTIL (nao derruba o login)
 // ---------------------------------------------------------------------
 // Como funciona:
-//  - No arranque, o app le a tabela `app_config` no Supabase (mesmo banco
-//    da plataforma) e compara com a versao que ele esta' rodando.
-//  - Se estiver atras (min_version) OU se o admin mudou o `reload_token`,
-//    ele limpa SO' o cache de arquivos + service worker e recarrega.
-//  - O localStorage (token de sessao/login) NAO e' tocado -> continua logado.
+//  - No arranque, o app le `min_version` na tabela `app_config` (mesmo banco
+//    da plataforma). Se a versao que ele roda for menor, ele apenas RECARREGA.
+//  - NAO limpa cache, NAO mexe em service worker, NAO toca no localStorage.
+//    -> a sessao/login do voluntario e' preservada.
+//  - Combinado com o `index.html` servido como no-cache no Render, o reload
+//    busca a versao nova (os bundles tem nome com hash).
 //
-//  IMPORTANTE: sempre que publicar uma versao nova, suba o numero em
-//  APP_VERSION abaixo E no app.config.js ("version"), mantendo-os iguais.
+//  Contrato com a plataforma: o botao do admin define `min_version` igual a'
+//  versao publicada. Quem estiver abaixo recarrega e pega a versao nova.
+//
+//  IMPORTANTE: a cada publicacao, suba APP_VERSION aqui E em app.config.js.
 // =====================================================================
 
-export const APP_VERSION = '1.0.2'; // <<< BUMP a cada publicacao (igual ao app.config.js)
+export const APP_VERSION = '1.0.3'; // <<< BUMP a cada publicacao (igual ao app.config.js)
 
-const TOKEN_KEY = 'app_reload_token';
 const GUARD_KEY = 'app_update_done'; // evita loop de reload na mesma sessao
 
 function versaoMenor(a: string, b: string): boolean {
@@ -32,30 +34,10 @@ function versaoMenor(a: string, b: string): boolean {
   return false;
 }
 
-async function limparCacheDeArquivos(): Promise<void> {
-  // Limpa apenas o Cache Storage (arquivos do PWA) e o service worker.
-  // NAO mexe no localStorage -> a sessao do voluntario e' preservada.
-  try {
-    if (typeof caches !== 'undefined') {
-      const chaves = await caches.keys();
-      await Promise.all(chaves.map((k) => caches.delete(k)));
-    }
-  } catch {
-    /* ignore */
-  }
-  try {
-    if ('serviceWorker' in navigator) {
-      const regs = await navigator.serviceWorker.getRegistrations();
-      await Promise.all(regs.map((r) => r.unregister()));
-    }
-  } catch {
-    /* ignore */
-  }
-}
-
 export async function checarAtualizacao(): Promise<void> {
   if (Platform.OS !== 'web' || typeof window === 'undefined') return;
-  // Ja tentamos atualizar nesta sessao? Evita loop caso a config esteja errada.
+
+  // Ja recarregou nesta sessao? Evita loop caso min_version esteja mal configurado.
   try {
     if (window.sessionStorage.getItem(GUARD_KEY) === '1') return;
   } catch {
@@ -66,30 +48,20 @@ export async function checarAtualizacao(): Promise<void> {
     const supabase = getSupabase();
     const { data, error } = await supabase
       .from('app_config')
-      .select('min_version, reload_token')
+      .select('min_version')
       .eq('id', 1)
       .single();
     if (error || !data) return;
 
-    const tokenServidor = String((data as any).reload_token ?? '0');
-    const tokenLocal = window.localStorage.getItem(TOKEN_KEY);
+    const minVersion = String((data as any).min_version ?? '0.0.0');
 
-    const versaoAtrasada = versaoMenor(APP_VERSION, String((data as any).min_version ?? '0.0.0'));
-    const tokenMudou = tokenLocal !== null && tokenLocal !== tokenServidor;
-
-    // Primeira visita (sem token local): so' registra, nao recarrega.
-    if (tokenLocal === null) {
-      window.localStorage.setItem(TOKEN_KEY, tokenServidor);
-    }
-
-    if (versaoAtrasada || tokenMudou) {
+    if (versaoMenor(APP_VERSION, minVersion)) {
       try {
         window.sessionStorage.setItem(GUARD_KEY, '1');
       } catch {
         /* ignore */
       }
-      window.localStorage.setItem(TOKEN_KEY, tokenServidor);
-      await limparCacheDeArquivos();
+      // Atualizacao gentil: apenas recarrega. Nao limpa cache/SW/localStorage.
       window.location.reload();
     }
   } catch {

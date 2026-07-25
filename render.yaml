@@ -7,6 +7,15 @@ services:
     envVars:
       - key: NODE_ENV
         value: production
+    headers:
+      # index.html sempre revalidado -> o app pega a versao nova a cada abertura.
+      # (os bundles JS tem nome com hash, entao continuam cacheados normalmente)
+      - path: /
+        name: Cache-Control
+        value: "no-cache, must-revalidate"
+      - path: /index.html
+        name: Cache-Control
+        value: "no-cache, must-revalidate"
     routes:
       - type: rewrite
         source: /*
