@@ -27,25 +27,36 @@ import { checarAtualizacao } from './src/services/appUpdate';
 const Stack = createStackNavigator();
 const Tab = createBottomTabNavigator();
 
-// Web (PWA): limitar a largura para o app nao esticar em telas grandes
-if (
-  Platform.OS === 'web' &&
-  typeof document !== 'undefined' &&
-  !document.getElementById('tikatu-web-style')
-) {
-  const style = document.createElement('style');
-  style.id = 'tikatu-web-style';
-  style.textContent = `
-    html, body { background-color: #e2e8f0; }
-    #root {
-      max-width: 600px;
-      margin: 0 auto;
-      min-height: 100vh;
-      background-color: #f8fafc;
-      box-shadow: 0 0 24px rgba(15, 23, 42, 0.08);
-    }
-  `;
-  document.head.appendChild(style);
+// Web (PWA): largura limitada + altura VISIVEL real (desconta a barra do navegador no iPhone,
+// para a barra de abas de baixo nao ficar escondida atras da barra do Safari).
+if (Platform.OS === 'web' && typeof document !== 'undefined') {
+  // Habilita env(safe-area-inset-*) para respeitar o indicador do iPhone.
+  const vp = document.querySelector('meta[name="viewport"]');
+  if (vp && !/viewport-fit/.test(vp.getAttribute('content') || '')) {
+    vp.setAttribute(
+      'content',
+      (vp.getAttribute('content') || 'width=device-width, initial-scale=1') + ', viewport-fit=cover'
+    );
+  }
+
+  if (!document.getElementById('tikatu-web-style')) {
+    const style = document.createElement('style');
+    style.id = 'tikatu-web-style';
+    style.textContent = `
+      html, body { background-color: #e2e8f0; height: 100%; }
+      #root {
+        max-width: 600px;
+        margin: 0 auto;
+        min-height: 100vh;
+        min-height: 100dvh; /* altura visivel: desconta a barra do navegador no iPhone */
+        background-color: #f8fafc;
+        box-shadow: 0 0 24px rgba(15, 23, 42, 0.08);
+        /* respiro para o indicador inferior do iPhone (0 no navegador comum) */
+        padding-bottom: env(safe-area-inset-bottom, 0px);
+      }
+    `;
+    document.head.appendChild(style);
+  }
 }
 
 const TAB_ICONS: Record<string, keyof typeof Ionicons.glyphMap> = {

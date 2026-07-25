@@ -18,7 +18,7 @@ import { getSupabase } from './supabase';
 //  IMPORTANTE: a cada publicacao, suba APP_VERSION aqui E em app.config.js.
 // =====================================================================
 
-export const APP_VERSION = '1.0.3'; // <<< BUMP a cada publicacao (igual ao app.config.js)
+export const APP_VERSION = '1.0.4'; // <<< BUMP a cada publicacao (igual ao app.config.js)
 
 const GUARD_KEY = 'app_update_done'; // evita loop de reload na mesma sessao
 
