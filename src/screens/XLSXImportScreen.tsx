@@ -1,14 +1,6 @@
 import React, { useState } from 'react';
-import {
-  View,
-  Text,
-  TouchableOpacity,
-  StyleSheet,
-  ScrollView,
-  Alert,
-  ActivityIndicator,
-  KeyboardAvoidingView,
-} from 'react-native';
+import { View, Text, TouchableOpacity, StyleSheet, ScrollView, ActivityIndicator, KeyboardAvoidingView } from 'react-native';
+import { alertar } from '../services/dialog';
 import { Platform } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
 import * as DocumentPicker from 'expo-document-picker';
@@ -76,13 +68,9 @@ export default function XLSXImportScreen() {
     setTimeout(() => setWebToast({ visible: false, text: '' }), 3000);
   };
 
-  const showAlert = (title: string, message: string) => {
-    if (isWeb && typeof window !== 'undefined') {
-      try { window.alert(`${title}\n\n${message}`); } catch {}
-      return;
-    }
-    Alert.alert(title, message);
-  };
+  // `alertar` ja resolve web e nativo (ver src/services/dialog.ts), entao este
+  // wrapper existe so para nao mexer nas ~13 chamadas espalhadas pela tela.
+  const showAlert = (title: string, message: string) => alertar(title, message);
 
   const expectedHeaders = [
     'ID', 'Model Name', 'Date', 'EC', 'EC(Unit)', 'TDS', 'TDS(Unit)', 
@@ -277,7 +265,7 @@ export default function XLSXImportScreen() {
       });
 
       if (processedRows.length === 0) {
-        Alert.alert('Erro', 'Nenhum dado válido encontrado no arquivo');
+        alertar('Erro', 'Nenhum dado válido encontrado no arquivo');
         setProcessing(false);
         return;
       }
@@ -350,7 +338,7 @@ export default function XLSXImportScreen() {
       } else {
         // No mobile, mostrar alerta primeiro
         if (processedRows.length === 1) {
-          Alert.alert(
+          alertar(
             'Arquivo Processado',
             `Encontrada ${processedRows.length} coleta válida. Agora responda os fatores ambientais.`,
             [
@@ -365,7 +353,7 @@ export default function XLSXImportScreen() {
             ]
           );
         } else {
-          Alert.alert(
+          alertar(
             'Arquivo Processado',
             `Encontradas ${processedRows.length} coletas válidas. Você responderá os fatores ambientais para cada coleta individualmente.`,
             [
@@ -452,7 +440,7 @@ export default function XLSXImportScreen() {
             if (isWeb) {
               try { window.alert('Processamento Concluído\n\nTodos os fatores ambientais foram respondidos. Agora você pode sincronizar os dados.'); } catch {}
             } else {
-              Alert.alert(
+              alertar(
                 'Processamento Concluído',
                 'Todos os fatores ambientais foram respondidos. Agora você pode sincronizar os dados.',
                 [{ text: 'OK' }]
@@ -466,7 +454,7 @@ export default function XLSXImportScreen() {
                 // No web, abrir automaticamente a próxima coleta
                 startEnvironmentalFactors(nextRow, rowIndex + 1, updatedData.length);
               } else {
-                Alert.alert(
+                alertar(
                   'Fatores Ambientais Salvos',
                   `Fatores ambientais da coleta ${rowIndex + 1} salvos. Próxima coleta: ${nextRow.measuredAt}`,
                   [
@@ -493,14 +481,14 @@ export default function XLSXImportScreen() {
 
   const syncToSupabase = async () => {
     if (!readyToSync || !selectedFile) {
-      Alert.alert('Erro', 'Complete o processamento antes de sincronizar');
+      alertar('Erro', 'Complete o processamento antes de sincronizar');
       return;
     }
 
     // Verificar se todas as linhas têm fatores ambientais
     const incompleteRows = processedData.filter(row => !row.environmentalFactors);
     if (incompleteRows.length > 0) {
-      Alert.alert('Erro', `${incompleteRows.length} coletas ainda não têm fatores ambientais respondidos.`);
+      alertar('Erro', `${incompleteRows.length} coletas ainda não têm fatores ambientais respondidos.`);
       return;
     }
 
@@ -650,15 +638,10 @@ export default function XLSXImportScreen() {
           navigation.goBack();
         };
 
-        if (isWeb && typeof window !== 'undefined') {
-          // No PWA/web o Alert.alert nao aparece: usa window.alert e limpa direto.
-          try { window.alert(`Sincronização Concluída\n\n${successMessage}`); } catch {}
-          limparEVoltar();
-        } else {
-          Alert.alert('Sincronização Concluída', successMessage, [
-            { text: 'OK', onPress: limparEVoltar },
-          ]);
-        }
+        // `alertar` ja trata web e nativo (ver src/services/dialog.ts)
+        alertar('Sincronização Concluída', successMessage, [
+          { text: 'OK', onPress: limparEVoltar },
+        ]);
       }
 
     } catch (error) {

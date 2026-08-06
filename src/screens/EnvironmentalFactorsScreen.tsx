@@ -1,16 +1,6 @@
 import React, { useState } from 'react';
-import {
-  View,
-  Text,
-  TouchableOpacity,
-  StyleSheet,
-  ScrollView,
-  Alert,
-  ActivityIndicator,
-  TextInput,
-  KeyboardAvoidingView,
-  Platform,
-} from 'react-native';
+import { View, Text, TouchableOpacity, StyleSheet, ScrollView, ActivityIndicator, TextInput, KeyboardAvoidingView, Platform } from 'react-native';
+import { alertar } from '../services/dialog';
 import { useNavigation, useRoute } from '@react-navigation/native';
 import { Ionicons } from '@expo/vector-icons';
 import { useAuth } from '../contexts/AuthContext';
@@ -101,12 +91,12 @@ export default function EnvironmentalFactorsScreen() {
 
   const handleSubmit = async () => {
     if (!isFormComplete()) {
-      Alert.alert('Atenção', 'Por favor, responda todas as perguntas obrigatórias');
+      alertar('Atenção', 'Por favor, responda todas as perguntas obrigatórias');
       return;
     }
 
     if (!volunteer) {
-      Alert.alert('Erro', 'Dados do voluntário não encontrados');
+      alertar('Erro', 'Dados do voluntário não encontrados');
       return;
     }
 
@@ -117,7 +107,7 @@ export default function EnvironmentalFactorsScreen() {
         navigation.goBack();
       } catch (error) {
         console.error('Erro ao salvar fatores ambientais:', error);
-        Alert.alert('Erro', 'Erro ao salvar os dados. Tente novamente.');
+        alertar('Erro', 'Erro ao salvar os dados. Tente novamente.');
       }
       return;
     }
@@ -125,7 +115,7 @@ export default function EnvironmentalFactorsScreen() {
     // Fallback: fluxo local (quando não há callback)
     setLoading(true);
     try {
-      Alert.alert(
+      alertar(
         'Fatores Ambientais Registrados',
         'Respostas salvas com sucesso! Agora você pode sincronizar os dados.',
         [
@@ -137,7 +127,7 @@ export default function EnvironmentalFactorsScreen() {
       );
     } catch (error) {
       console.error('Erro ao salvar fatores ambientais:', error);
-      Alert.alert('Erro', 'Erro ao salvar os dados. Tente novamente.');
+      alertar('Erro', 'Erro ao salvar os dados. Tente novamente.');
     } finally {
       setLoading(false);
     }

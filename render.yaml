@@ -1,8 +1,15 @@
+# DEPLOY DE PRODUCAO
+#   Render, static site `tikatu-coleta`, dominio proprio https://coleta.tikatu.com.br
+#   O nome do servico no Render e' `tikatu-coleta` (nao `tikatu-coleta-pwa`).
+#
+# A pasta docs/ do repositorio guarda um build antigo publicado por GitHub Pages
+# em vinisaraiva.github.io/tikatu-coleta/. Nao e' o que os voluntarios usam.
+#
 services:
   - type: web
-    name: tikatu-coleta-pwa
+    name: tikatu-coleta
     env: static
-    buildCommand: npm install && npx expo export
+    buildCommand: npm install && npx expo export --platform web && node scripts/prepare-web.js
     staticPublishPath: ./dist
     envVars:
       - key: NODE_ENV
@@ -14,6 +21,13 @@ services:
         name: Cache-Control
         value: "no-cache, must-revalidate"
       - path: /index.html
+        name: Cache-Control
+        value: "no-cache, must-revalidate"
+      # O service worker NUNCA pode ser cacheado: e' ele que entrega a versao nova.
+      - path: /sw.js
+        name: Cache-Control
+        value: "no-cache, no-store, must-revalidate"
+      - path: /manifest.json
         name: Cache-Control
         value: "no-cache, must-revalidate"
     routes:

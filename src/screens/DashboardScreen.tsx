@@ -1,19 +1,14 @@
 import React, { useState, useEffect } from 'react';
-import {
-  View,
-  Text,
-  TouchableOpacity,
-  StyleSheet,
-  ScrollView,
-  Alert,
-  Image,
-  ActivityIndicator,
-} from 'react-native';
+import { View, Text, TouchableOpacity, StyleSheet, ScrollView, Image, ActivityIndicator } from 'react-native';
+import { alertar } from '../services/dialog';
 import { useNavigation, useFocusEffect } from '@react-navigation/native';
 import { Ionicons } from '@expo/vector-icons';
 import { useAuth, getCurrentPoint } from '../contexts/AuthContext';
 import { supabase } from '../services/supabase';
 import PointSelector from '../components/PointSelector';
+import CollectionScheduleCard from '../components/CollectionScheduleCard';
+import NotificationCard from '../components/NotificationCard';
+import { agendaDoPonto } from '../services/schedule';
 
 export default function DashboardScreen() {
   const navigation = useNavigation();
@@ -25,6 +20,8 @@ export default function DashboardScreen() {
   });
 
   const currentPoint = getCurrentPoint(volunteer, selectedPointId);
+  // Lembrete da agenda de coleta do ponto selecionado (cadastrada na plataforma web)
+  const agenda = agendaDoPonto(volunteer?.schedules, currentPoint?.id ?? null);
 
   const fetchCollectionStats = async () => {
     if (!currentPoint?.id) {
@@ -68,12 +65,12 @@ export default function DashboardScreen() {
   );
 
   const handleLogout = () => {
-    Alert.alert(
+    alertar(
       'Sair',
       'Tem certeza que deseja sair?',
       [
         { text: 'Cancelar', style: 'cancel' },
-        { text: 'Sair', onPress: logout, style: 'destructive' },
+        { text: 'Sair', onPress: () => logout(), style: 'destructive' },
       ]
     );
   };
@@ -113,6 +110,11 @@ export default function DashboardScreen() {
         <View style={styles.selectorContainer}>
           <PointSelector />
         </View>
+      </View>
+
+      <View style={styles.agendaContainer}>
+        <CollectionScheduleCard schedule={agenda} pointName={currentPoint?.name} />
+        <NotificationCard />
       </View>
 
       <View style={styles.statsContainer}>
@@ -225,6 +227,10 @@ const styles = StyleSheet.create({
   selectorContainer: {
     marginTop: 12,
     paddingHorizontal: 20,
+  },
+  agendaContainer: {
+    paddingHorizontal: 20,
+    marginTop: 16,
   },
   statsContainer: {
     flexDirection: 'row',

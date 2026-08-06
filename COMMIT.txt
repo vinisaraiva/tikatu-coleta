@@ -1,0 +1,63 @@
+feat: PWA instalavel, avisos de coleta e correcao do Alert no navegador (v1.2.0)
+
+PWA INSTALAVEL
+O app nunca ofereceu instalacao de verdade. Nao era a interface: o site no ar
+(coleta.tikatu.com.br) responde 404 em /manifest.json e /sw.js, e o index.html
+publicado nao tem link de manifest nem registro de service worker. Tres causas:
+
+  1. Nao havia service worker. Sem ele o Chrome nunca dispara
+     `beforeinstallprompt`, que e' quem abre a janela nativa de instalacao.
+  2. Os icones eram falsos: o manifest declarava 192x192 e 512x512 apontando
+     para imagem-home.png, que tem 450x450. O Chrome le o PNG e confere.
+  3. O manifest nem era gerado no deploy: o render.yaml rodava apenas
+     `expo export`, entao scripts/generate-manifest.js nunca executava — e esse
+     script ainda apontava para logo_app.png, que e' 500x200 e nem e' quadrado.
+
+O banner antigo (InstallPrompt) aparecia 1s depois em qualquer celular e parecia
+uma oferta de instalacao, mas o botao nao tinha API para chamar.
+
+- novo scripts/prepare-web.js: gera manifest, service worker e icones, e injeta
+  no index.html o manifest, as meta tags do iOS e o registro do SW
+- assets/pwa/: icones 192/512 reais + maskable + apple-touch, gerados de
+  icon.png (1024x1024)
+- render.yaml: buildCommand passa a rodar o prepare-web; nome do servico
+  corrigido para `tikatu-coleta` (estava `tikatu-coleta-pwa`, que nao existe)
+- caminhos todos relativos e SW calculando a propria base: funciona na raiz do
+  dominio e nao quebra se mudar de hospedagem
+
+TELA DE INSTALACAO
+InstallPrompt (banner) substituido por uma tela com o passo a passo por
+plataforma. O botao nativo nao existe em todo lugar — no iPhone a Apple nao
+expoe API alguma e so o Safari instala. A tela detecta isso e explica o caminho,
+em vez de mostrar um botao inerte. Dispensavel por 7 dias, e permanente em Perfil.
+
+NOTIFICACOES PUSH
+O backend ja existia (Edge Function volunteer-push-subscribe), mas faltava o
+lado do app inteiro: nada pedia permissao nem assinava no pushManager. O service
+worker tambem ganhou handlers de `push` e `notificationclick`.
+A permissao e' pedida por TOQUE, nunca no carregamento — o Chrome ignora pedidos
+automaticos e passa a negar sem perguntar.
+
+ALERT NAO FUNCIONA NO NAVEGADOR
+No react-native-web o Alert e' `class Alert { static alert() {} }` — uma funcao
+vazia. As 16 chamadas de Alert.alert sumiam em silencio no PWA. Era por isso que
+o botao "Sair" do Dashboard nao fazia nada: o dialogo de confirmacao nunca
+aparecia, entao o onPress do "Sair" nunca rodava.
+Novo src/services/dialog.ts com a mesma assinatura, usando window.confirm na web.
+
+LEMBRETE DE AGENDA NO DASHBOARD
+Card com os dias e o horario de coleta do voluntario, lido de volunteer_schedules
+via volunteer-auth (que agora devolve `schedules`).
+
+ATUALIZACAO POR reload_token
+appUpdate.ts lia apenas `min_version` e IGNORAVA `reload_token`, entao o botao
+"Forcar atualizacao" do admin nao surtia efeito. A saida encontrada na plataforma
+foi incrementar min_version, que chegou a 1.0.13 com a versao publicada em 1.0.4 —
+fazendo todo voluntario se considerar desatualizado para sempre.
+Agora o app le os dois campos. Correcao do lado da plataforma documentada em
+documentacao/CORRIGIR-BOTAO-ATUALIZACAO-PLATAFORMA.md.
+
+VERSAO EM FONTE UNICA
+package.json (1.0.0), app.config.js (1.0.4) e appUpdate.ts (1.0.4 no codigo)
+divergiam. Agora: package.json -> app.config.js -> Constants.expoConfig.version.
+Publicar uma versao nova = mexer so no package.json. Subiu para 1.2.0.

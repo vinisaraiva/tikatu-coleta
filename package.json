@@ -1,13 +1,13 @@
 {
   "name": "mobile",
-  "version": "1.0.0",
+  "version": "1.2.0",
   "main": "index.ts",
   "scripts": {
     "start": "expo start",
     "android": "expo run:android",
     "ios": "expo run:ios",
     "web": "expo start --web",
-    "build:web": "expo export --platform web && node scripts/generate-manifest.js"
+    "build:web": "expo export --platform web && node scripts/prepare-web.js"
   },
   "dependencies": {
     "@expo/vector-icons": "^14.0.0",
@@ -21,6 +21,7 @@
     "@supabase/supabase-js": "^2.55.0",
     "expo": "~53.0.20",
     "expo-camera": "^16.1.11",
+    "expo-constants": "~17.1.7",
     "expo-document-picker": "^13.1.6",
     "expo-file-system": "^18.1.11",
     "expo-location": "^18.1.6",

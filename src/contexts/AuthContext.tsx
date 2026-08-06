@@ -1,6 +1,7 @@
 import React, { createContext, useContext, useState, useEffect, useCallback } from 'react';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { callFunction, getSessionToken, setSessionToken, clearSessionToken } from '../services/api';
+import type { Schedule } from '../services/schedule';
 
 export interface Point {
   id: number;
@@ -24,6 +25,8 @@ interface Volunteer {
   points: Point[];
   point?: Point;
   point_id?: number;
+  /** Agenda de coleta por ponto, cadastrada pelo admin na plataforma web. */
+  schedules?: Schedule[];
 }
 
 interface AuthContextType {
@@ -65,6 +68,19 @@ function normalizePoints(rawPoints: any[]): Point[] {
   }));
 }
 
+function normalizeSchedules(raw: any[]): Schedule[] {
+  return (raw || [])
+    .filter((s: any) => s && s.point_id != null)
+    .map((s: any) => ({
+      id: String(s.id ?? ''),
+      point_id: Number(s.point_id),
+      weekdays: Array.isArray(s.weekdays) ? s.weekdays.map((d: any) => Number(d)) : [],
+      scheduled_time: String(s.scheduled_time ?? ''),
+      tolerance_minutes: Number(s.tolerance_minutes ?? 60),
+      is_active: s.is_active !== undefined ? !!s.is_active : true,
+    }));
+}
+
 function buildVolunteer(raw: any): { volunteer: Volunteer; initialPointId: number | null } {
   const points = normalizePoints(raw?.points || []);
   const primaryPoint = points.find((p) => p.is_primary) || points[0] || null;
@@ -76,6 +92,7 @@ function buildVolunteer(raw: any): { volunteer: Volunteer; initialPointId: numbe
     points,
     point: primaryPoint || undefined,
     point_id: primaryPoint?.id || undefined,
+    schedules: normalizeSchedules(raw?.schedules || []),
   };
   return { volunteer, initialPointId: primaryPoint?.id ?? null };
 }

@@ -1,11 +1,30 @@
-import React from 'react';
-import { View, Text, StyleSheet, ScrollView } from 'react-native';
+import React, { useState } from 'react';
+import { View, Text, StyleSheet, ScrollView, TouchableOpacity } from 'react-native';
+import { Ionicons } from '@expo/vector-icons';
 import { useAuth, getCurrentPoint } from '../contexts/AuthContext';
 import { APP_VERSION } from '../services/appUpdate';
+import { usePwaInstall } from '../services/pwaInstall';
+import InstallScreen from './InstallScreen';
+import NotificationCard from '../components/NotificationCard';
 
 export default function ProfileScreen() {
   const { volunteer, selectedPointId } = useAuth();
   const currentPoint = getCurrentPoint(volunteer, selectedPointId);
+  const { naWeb, instalado, navegador, promptDisponivel, instalar } = usePwaInstall();
+  const [mostrarInstalacao, setMostrarInstalacao] = useState(false);
+
+  if (mostrarInstalacao) {
+    return (
+      <InstallScreen
+        modoManual
+        navegador={navegador}
+        promptDisponivel={promptDisponivel}
+        onInstalar={instalar}
+        onDispensar={() => setMostrarInstalacao(false)}
+        onFechar={() => setMostrarInstalacao(false)}
+      />
+    );
+  }
 
   return (
     <ScrollView style={styles.container}>
@@ -52,6 +71,39 @@ export default function ProfileScreen() {
           </>
         )}
       </View>
+
+      {/* Avisos de coleta — sempre visível aqui, mesmo quando já ativos */}
+      {naWeb && (
+        <View style={styles.notificacaoBox}>
+          <NotificationCard compacto />
+        </View>
+      )}
+
+      {/* Instalação do app — só faz sentido na web e se ainda não estiver instalado */}
+      {naWeb && !instalado && (
+        <TouchableOpacity
+          style={styles.installRow}
+          onPress={() => setMostrarInstalacao(true)}
+          accessibilityRole="button"
+          accessibilityLabel="Ver como instalar o aplicativo"
+        >
+          <Ionicons name="download-outline" size={20} color="#0066CC" />
+          <View style={styles.installTextBox}>
+            <Text style={styles.installTitle}>Instalar o aplicativo</Text>
+            <Text style={styles.installSubtitle}>
+              Ícone na tela inicial, lembretes de coleta e uso sem depender do navegador.
+            </Text>
+          </View>
+          <Ionicons name="chevron-forward" size={18} color="#94a3b8" />
+        </TouchableOpacity>
+      )}
+
+      {naWeb && instalado && (
+        <View style={styles.installedRow}>
+          <Ionicons name="checkmark-circle" size={18} color="#059669" />
+          <Text style={styles.installedText}>Aplicativo instalado neste aparelho.</Text>
+        </View>
+      )}
 
       <Text style={styles.versionText}>Versão {APP_VERSION}</Text>
     </ScrollView>
@@ -145,6 +197,29 @@ const styles = StyleSheet.create({
     fontSize: 14,
     color: '#64748b',
   },
+  notificacaoBox: { marginTop: 16 },
+  installRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
+    backgroundColor: '#fff',
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: '#e2e8f0',
+    padding: 16,
+    marginTop: 16,
+  },
+  installTextBox: { flex: 1 },
+  installTitle: { fontSize: 15, fontWeight: '600', color: '#1e293b', marginBottom: 2 },
+  installSubtitle: { fontSize: 12, color: '#64748b', lineHeight: 17 },
+  installedRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+    marginTop: 16,
+    justifyContent: 'center',
+  },
+  installedText: { fontSize: 13, color: '#059669' },
   versionText: {
     textAlign: 'center',
     color: '#94a3b8',

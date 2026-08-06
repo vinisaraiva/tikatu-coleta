@@ -1,9 +1,13 @@
+// FONTE UNICA DA VERSAO: package.json.
+// Nao edite a versao aqui nem em src/services/appUpdate.ts — mude so no package.json.
+const { version } = require('./package.json');
+
 export default {
   expo: {
     entryPoint: "./index.ts",
     name: "Tikatu Coleta",
     slug: "tikatu-coleta",
-    version: "1.0.4",
+    version,
     orientation: "portrait",
     icon: "./assets/imagem-home.png",
     userInterfaceStyle: "light",
