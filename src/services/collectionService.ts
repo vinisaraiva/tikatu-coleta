@@ -67,6 +67,44 @@ export class CollectionService {
    * Usado para não repetir perguntas/envio de coletas já sincronizadas
    * (inclusive as enviadas antes desta versão ou de outro dispositivo).
    */
+  /**
+   * Ja existe leitura deste ponto DENTRO da janela de +/- `janelaMinutos` em
+   * torno do horario informado?
+   *
+   * Por que uma janela e nao o horario exato: a sonda grava varias medicoes
+   * numa mesma ida a campo (ate 8 em 10 minutos, em arquivo real). O app agrupa
+   * essas medicoes numa coleta so e envia apenas a ultima. As descartadas
+   * continuam no arquivo do voluntario e voltariam a aparecer como novas na
+   * proxima importacao se a checagem fosse por igualdade exata.
+   *
+   * Checar a janela resolve isso no SERVIDOR, entao funciona tambem quando o
+   * voluntario troca de aparelho ou limpa os dados do navegador.
+   */
+  static async existsReadingNearby(
+    pointId: number,
+    measuredAt: string,
+    janelaMinutos = 15
+  ): Promise<boolean> {
+    try {
+      const t = new Date(measuredAt).getTime();
+      if (isNaN(t)) return false;
+      const de = new Date(t - janelaMinutos * 60000).toISOString();
+      const ate = new Date(t + janelaMinutos * 60000).toISOString();
+
+      const { data, error } = await supabase
+        .from('readings')
+        .select('id')
+        .eq('point_id', pointId)
+        .gte('measured_at', de)
+        .lte('measured_at', ate)
+        .limit(1);
+      if (error) return false;
+      return Array.isArray(data) && data.length > 0;
+    } catch {
+      return false;
+    }
+  }
+
   static async existsReading(pointId: number, measuredAt: string): Promise<boolean> {
     try {
       const { data, error } = await supabase

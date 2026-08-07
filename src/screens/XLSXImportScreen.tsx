@@ -11,6 +11,7 @@ import PointSelector from '../components/PointSelector';
 import { CollectionService } from '../services/collectionService';
 import { uploadVolunteerFile } from '../services/uploadService';
 import { isCollectionSynced, markCollectionSynced } from '../services/syncedCollections';
+import { agruparPorVisita, descreverVisita, JANELA_MINUTOS } from '../services/collectionGrouping';
 
 interface XLSXRow {
   ID: string;
@@ -47,6 +48,11 @@ interface ProcessedRow {
   }>;
   originalRow: XLSXRow;
   environmentalFactors?: any; // Fatores ambientais específicos para esta linha
+  // Preenchidos por agruparPorVisita (ver src/services/collectionGrouping.ts):
+  // varias medicoes da sonda na mesma ida a campo viram UMA coleta.
+  medicoesNoGrupo?: number;
+  descartadas?: string[];
+  inicioDaVisita?: string;
 }
 
 export default function XLSXImportScreen() {
@@ -220,7 +226,7 @@ export default function XLSXImportScreen() {
       }
 
       // Processar cada linha
-      const processedRows: ProcessedRow[] = [];
+      let processedRows: ProcessedRow[] = [];
 
       for (let i = 0; i < data.length; i++) {
         const row = data[i];
@@ -270,8 +276,20 @@ export default function XLSXImportScreen() {
         return;
       }
 
-      // Pular coletas ja sincronizadas neste dispositivo (evita reperguntar/reenviar).
-      // Chave = ponto + data/hora, a mesma da trava anti-duplicidade do banco.
+      // -----------------------------------------------------------------
+      // AGRUPAR MEDICOES DA MESMA VISITA
+      // -----------------------------------------------------------------
+      // A sonda grava uma linha a cada aperto de botao. Numa ida a campo isso
+      // vira 4, 5, 8 linhas com horarios diferentes — que NAO sao duplicatas,
+      // mas tambem nao sao coletas distintas. Sem agrupar, o app pedia o
+      // questionario de fatores ambientais uma vez por linha.
+      const totalMedicoes = processedRows.length;
+      const visitas = agruparPorVisita(processedRows, JANELA_MINUTOS);
+      processedRows = visitas;
+
+      // Pular visitas ja enviadas. A checagem e' por JANELA, nao por horario
+      // exato: as medicoes descartadas do grupo continuam no arquivo e
+      // voltariam a aparecer como novas se comparassemos so a igualdade.
       let jaSincronizadas = 0;
       for (let i = processedRows.length - 1; i >= 0; i--) {
         const mAt = processedRows[i].measuredAt;
@@ -279,11 +297,14 @@ export default function XLSXImportScreen() {
         try {
           // 1. memoria local (rapida, funciona offline)
           sincronizada = await isCollectionSynced(currentPoint.id, mAt);
-          // 2. se nao achou local, confirma no banco (cobre envios antigos / outro aparelho)
+          // 2. se nao achou local, confirma no banco (cobre outro aparelho,
+          //    navegador limpo, e as medicoes descartadas do mesmo grupo)
           if (!sincronizada) {
-            sincronizada = await CollectionService.existsReading(currentPoint.id, mAt);
+            sincronizada = await CollectionService.existsReadingNearby(
+              currentPoint.id, mAt, JANELA_MINUTOS
+            );
             if (sincronizada) {
-              await markCollectionSynced(currentPoint.id, mAt); // cacheia para as proximas
+              await markCollectionSynced(currentPoint.id, mAt); // cacheia
             }
           }
         } catch {
@@ -298,19 +319,33 @@ export default function XLSXImportScreen() {
       if (processedRows.length === 0) {
         showAlert(
           'Tudo sincronizado',
-          'Todas as coletas deste arquivo já foram enviadas neste dispositivo. Nada novo para sincronizar.'
+          `As ${totalMedicoes} medições deste arquivo correspondem a ${visitas.length} coleta(s), ` +
+          'e todas já foram enviadas. Não há nada novo — pode fechar tranquila.'
         );
         setProcessing(false);
         return;
       }
 
-      if (jaSincronizadas > 0) {
+      const resumoVisitas = processedRows.map((v: any) => `• ${descreverVisita(v)}`).join('\n');
+      const agrupou = totalMedicoes > visitas.length;
+
+      if (jaSincronizadas > 0 || agrupou) {
         const plural = processedRows.length > 1 ? 's' : '';
-        showAlert(
-          'Leituras pendentes',
-          `${jaSincronizadas} leitura(s) já sincronizada(s) foram ignoradas. ` +
-          `${processedRows.length} leitura${plural} pendente${plural} — responda as perguntas a seguir.`
+        const partes: string[] = [];
+        if (agrupou) {
+          partes.push(
+            `As ${totalMedicoes} medições do arquivo foram agrupadas em ${visitas.length} coleta(s) — ` +
+            `medições feitas com menos de ${JANELA_MINUTOS} min de diferença contam como a mesma ida a campo.`
+          );
+        }
+        if (jaSincronizadas > 0) {
+          partes.push(`${jaSincronizadas} coleta(s) já enviada(s) foram ignoradas.`);
+        }
+        partes.push(
+          `${processedRows.length} coleta${plural} pendente${plural}:\n${resumoVisitas}\n\n` +
+          'Responda as perguntas a seguir.'
         );
+        showAlert('Coletas encontradas', partes.join('\n\n'));
       }
 
       // Limpar estado anterior e definir novos dados
@@ -479,6 +514,58 @@ export default function XLSXImportScreen() {
     }
   };
 
+  /**
+   * Ignora uma coleta pendente.
+   *
+   * Necessario porque `syncToSupabase` exige fatores ambientais em TODAS as
+   * pendentes: uma visita antiga sem resposta bloqueia o envio das novas. E
+   * como as medicoes continuam no arquivo da sonda, ela reapareceria a cada
+   * importacao — travando o voluntario indefinidamente.
+   *
+   * A coleta ignorada e' marcada localmente como resolvida, incluindo as
+   * medicoes descartadas do mesmo grupo, para nao voltar. Nada e' gravado no
+   * banco: a coleta simplesmente nao existe, em vez de existir com fatores
+   * ambientais inventados.
+   */
+  const ignorarColeta = async (indice: number) => {
+    const row = processedData[indice];
+    if (!row) return;
+
+    const currentPoint = getCurrentPoint(volunteer, selectedPointId);
+    if (!currentPoint?.id) return;
+
+    const rotulo = descreverVisita(row as any);
+    alertar(
+      'Ignorar esta coleta?',
+      `A coleta de ${rotulo} nao sera enviada e deixara de aparecer nas proximas ` +
+      'importacoes neste aparelho. Use quando nao for possivel lembrar as condicoes ' +
+      'do dia (cor da agua, cheiro, chuva).',
+      [
+        { text: 'Cancelar', style: 'cancel' },
+        {
+          text: 'Ignorar',
+          style: 'destructive',
+          onPress: async () => {
+            await markCollectionSynced(currentPoint.id, row.measuredAt);
+            for (const d of (row.descartadas ?? [])) {
+              await markCollectionSynced(currentPoint.id, d);
+            }
+            const restantes = processedData.filter((_, i) => i !== indice);
+            setProcessedData(restantes);
+            if (restantes.length === 0) {
+              setReadyToSync(false);
+              setCurrentRowIndex(0);
+              showWebToast("Nada pendente neste arquivo.");
+            } else {
+              setCurrentRowIndex(Math.min(currentRowIndex, restantes.length - 1));
+              setReadyToSync(restantes.every((r) => !!r.environmentalFactors));
+            }
+          },
+        },
+      ]
+    );
+  };
+
   const syncToSupabase = async () => {
     if (!readyToSync || !selectedFile) {
       alertar('Erro', 'Complete o processamento antes de sincronizar');
@@ -511,14 +598,27 @@ export default function XLSXImportScreen() {
         const readingData = {
           point_id: currentPoint.id,
           measured_at: row.measuredAt,
-          factors: row.environmentalFactors,
+          factors: {
+            ...row.environmentalFactors,
+            // Rastreabilidade do agrupamento: a sonda gravou N medicoes nesta
+            // visita e enviamos a ultima. Guardar as descartadas mantem a coleta
+            // auditavel — nenhum dado do arquivo some em silencio.
+            medicoes_no_grupo: row.medicoesNoGrupo ?? 1,
+            medicoes_descartadas: row.descartadas ?? [],
+            inicio_da_visita: row.inicioDaVisita ?? row.measuredAt,
+            janela_agrupamento_min: JANELA_MINUTOS,
+          },
           parameters: row.parameters,
         };
 
         console.log(`Inserindo reading ${i + 1}/${processedData.length} com dados:`, readingData);
         await CollectionService.insertReading(readingData);
-        // Registrar localmente que esta coleta ja foi enviada (evita reperguntar/reenviar)
+        // Registrar localmente a visita inteira: a representante E as medicoes
+        // descartadas. Sem isso, as descartadas voltariam como coleta nova.
         await markCollectionSynced(currentPoint.id, row.measuredAt);
+        for (const descartada of (row.descartadas ?? [])) {
+          await markCollectionSynced(currentPoint.id, descartada);
+        }
       }
 
       // Modificar o arquivo XLSX original com todos os fatores ambientais
@@ -749,6 +849,29 @@ export default function XLSXImportScreen() {
                 </View>
               )}
             </View>
+
+            {/* Uma linha por VISITA (medicoes proximas ja foram agrupadas). */}
+            {processedData.map((row, i) => (
+              <View key={`${row.measuredAt}-${i}`} style={styles.coletaLinha}>
+                <View style={{ flex: 1 }}>
+                  <Text style={styles.coletaTitulo}>{descreverVisita(row as any)}</Text>
+                  <Text style={styles.coletaEstado}>
+                    {row.environmentalFactors
+                      ? 'Fatores ambientais respondidos'
+                      : 'Aguardando os fatores ambientais'}
+                  </Text>
+                </View>
+                {!row.environmentalFactors && (
+                  <TouchableOpacity
+                    onPress={() => ignorarColeta(i)}
+                    accessibilityRole="button"
+                    accessibilityLabel={`Ignorar a coleta de ${descreverVisita(row as any)}`}
+                  >
+                    <Text style={styles.coletaIgnorar}>Ignorar</Text>
+                  </TouchableOpacity>
+                )}
+              </View>
+            ))}
           </View>
         )}
 
@@ -1071,6 +1194,20 @@ const styles = StyleSheet.create({
     fontSize: 16,
     fontWeight: 'bold',
   },
+  coletaLinha: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
+    backgroundColor: '#fff',
+    borderWidth: 1,
+    borderColor: '#e2e8f0',
+    borderRadius: 8,
+    padding: 12,
+    marginTop: 8,
+  },
+  coletaTitulo: { fontSize: 14, fontWeight: '600', color: '#1e293b' },
+  coletaEstado: { fontSize: 12, color: '#64748b', marginTop: 2 },
+  coletaIgnorar: { fontSize: 13, fontWeight: '600', color: '#b91c1c', paddingHorizontal: 8, paddingVertical: 4 },
   resultsSection: {
     backgroundColor: '#fff',
     padding: 20,
