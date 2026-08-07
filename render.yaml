@@ -30,6 +30,14 @@ services:
       - path: /manifest.json
         name: Cache-Control
         value: "no-cache, must-revalidate"
+      # version.json e' lido pelo painel admin da plataforma, que roda em OUTRO
+      # dominio — sem este header o navegador bloqueia a leitura por CORS.
+      - path: /version.json
+        name: Access-Control-Allow-Origin
+        value: "*"
+      - path: /version.json
+        name: Cache-Control
+        value: "no-cache, must-revalidate"
     routes:
       - type: rewrite
         source: /*

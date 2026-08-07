@@ -26,9 +26,10 @@
  * O QUE ESTE SCRIPT FAZ (depois do `expo export --platform web`)
  *   1. copia os ícones PWA reais para dist/pwa/
  *   2. escreve dist/manifest.json com caminhos relativos
- *   3. escreve dist/sw.js (cache + notificações push)
- *   4. injeta no dist/index.html o manifest, meta tags do iOS e o registro do SW
- *   5. cria dist/.nojekyll e dist/404.html — inofensivos no Render, e deixam o
+ *   3. escreve dist/version.json (a versão publicada, lida pelo painel admin)
+ *   4. escreve dist/sw.js (cache + notificações push)
+ *   5. injeta no dist/index.html o manifest, meta tags do iOS e o registro do SW
+ *   6. cria dist/.nojekyll e dist/404.html — inofensivos no Render, e deixam o
  *      build pronto caso a publicação volte para o GitHub Pages
  * ===================================================================== */
 
@@ -113,6 +114,19 @@ const manifest = {
 
 fs.writeFileSync(path.join(saida, 'manifest.json'), JSON.stringify(manifest, null, 2));
 console.log('[prepare-web] manifest.json escrito');
+
+// ---------------------------------------------------------------------
+// 2b. version.json
+// ---------------------------------------------------------------------
+// Publica a versão que acabou de ir para o ar, para que a plataforma admin
+// consiga mostrar "versão publicada" ao lado de "versão mínima exigida".
+// Sem isso o gestor vê um número solto na tela e não tem como saber se ele
+// está coerente com o que os voluntários estão rodando.
+fs.writeFileSync(
+  path.join(saida, 'version.json'),
+  JSON.stringify({ version, built_at: new Date().toISOString() }, null, 2),
+);
+console.log(`[prepare-web] version.json escrito (${version})`);
 
 // ---------------------------------------------------------------------
 // 3. service worker
@@ -356,6 +370,7 @@ const obrigatorios = [
   '404.html',
   '.nojekyll',
   'manifest.json',
+  'version.json',
   'sw.js',
   'pwa/icon-192.png',
   'pwa/icon-512.png',
