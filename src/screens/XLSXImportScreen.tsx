@@ -140,10 +140,32 @@ export default function XLSXImportScreen() {
     return isValid;
   };
 
+  /**
+   * Converte o valor bruto da planilha da sonda em numero.
+   *
+   * CUIDADO COM O ZERO. A versao anterior comecava com `if (!value ...)`, e em
+   * JavaScript `0` e' falsy — entao toda leitura igual a zero era descartada
+   * como se nao existisse. No arquivo real da voluntaria a maioria das linhas
+   * tem EC = 0.0 e TDS = 0.0; na coleta de 31/08 os dois vieram zero e os
+   * parametros simplesmente sumiram, sobrando so temperatura, ORP e pH.
+   *
+   * Zero e' uma MEDICAO, nao ausencia de medicao. Descarta-lo esconde
+   * justamente o caso que mais importa detectar: sensor fora d'agua, sujo ou
+   * descalibrado. Melhor gravar o zero e deixar a analise decidir o que fazer
+   * com ele do que perder o registro em silencio.
+   *
+   * Ausencia de leitura, na planilha desta sonda, e' o traco: "-".
+   */
   const parseValue = (value: string): number | null => {
-    if (!value || value === '-' || value === '') return null;
-    const num = parseFloat(value);
-    return isNaN(num) ? null : num;
+    if (value === null || value === undefined) return null;
+
+    const texto = String(value).trim();
+    // '-' e '--' sao como a sonda marca "sem leitura"; string vazia idem.
+    if (texto === '' || /^-+$/.test(texto)) return null;
+
+    // Aceita virgula decimal, caso a sonda seja configurada em outro idioma.
+    const num = parseFloat(texto.replace(',', '.'));
+    return Number.isFinite(num) ? num : null;
   };
 
   // A sonda grava a data/hora em HORA LOCAL (ex.: "2023-08-21 10:27:12").
