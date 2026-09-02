@@ -8,6 +8,7 @@ import { supabase } from '../services/supabase';
 import PointSelector from '../components/PointSelector';
 import CollectionScheduleCard from '../components/CollectionScheduleCard';
 import NotificationCard from '../components/NotificationCard';
+import MissedCollectionCard from '../components/MissedCollectionCard';
 import { agendaDoPonto } from '../services/schedule';
 
 export default function DashboardScreen() {
@@ -113,6 +114,8 @@ export default function DashboardScreen() {
       </View>
 
       <View style={styles.agendaContainer}>
+        {/* Pendencia primeiro: e' o unico item que pede uma acao do voluntario. */}
+        <MissedCollectionCard />
         <CollectionScheduleCard schedule={agenda} pointName={currentPoint?.name} />
         <NotificationCard />
       </View>
