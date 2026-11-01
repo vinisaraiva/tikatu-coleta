@@ -10,7 +10,14 @@ import { useAuth, getCurrentPoint } from '../contexts/AuthContext';
 import PointSelector from '../components/PointSelector';
 import { CollectionService } from '../services/collectionService';
 import { uploadVolunteerFile } from '../services/uploadService';
-import { isCollectionSynced, markCollectionSynced } from '../services/syncedCollections';
+import {
+  isCollectionSynced,
+  markCollectionSynced,
+  isCollectionIgnored,
+  markCollectionIgnored,
+  countIgnored,
+  clearIgnored,
+} from '../services/syncedCollections';
 import { agruparPorVisita, descreverVisita, JANELA_MINUTOS } from '../services/collectionGrouping';
 
 interface XLSXRow {
@@ -306,16 +313,26 @@ export default function XLSXImportScreen() {
       // mas tambem nao sao coletas distintas. Sem agrupar, o app pedia o
       // questionario de fatores ambientais uma vez por linha.
       const totalMedicoes = processedRows.length;
+      // COPIA, nao a mesma referencia: o filtro abaixo usa splice, e apontar
+      // `processedRows` para o mesmo array de `visitas` esvaziava os dois —
+      // fazendo a mensagem dizer "0 coleta(s)" quando havia coletas.
       const visitas = agruparPorVisita(processedRows, JANELA_MINUTOS);
-      processedRows = visitas;
+      const totalVisitas = visitas.length;
+      processedRows = [...visitas];
 
       // Pular visitas ja enviadas. A checagem e' por JANELA, nao por horario
       // exato: as medicoes descartadas do grupo continuam no arquivo e
       // voltariam a aparecer como novas se comparassemos so a igualdade.
+      //
+      // "Ja enviada" e "ignorada" sao contadas SEPARADAMENTE. Juntar as duas
+      // fazia o app anunciar "tudo sincronizado" para coletas que nunca foram
+      // enviadas — dizer que deu certo quando nao deu e' o pior erro possivel.
       let jaSincronizadas = 0;
+      let ignoradas = 0;
       for (let i = processedRows.length - 1; i >= 0; i--) {
         const mAt = processedRows[i].measuredAt;
         let sincronizada = false;
+        let ignorada = false;
         try {
           // 1. memoria local (rapida, funciona offline)
           sincronizada = await isCollectionSynced(currentPoint.id, mAt);
@@ -329,39 +346,72 @@ export default function XLSXImportScreen() {
               await markCollectionSynced(currentPoint.id, mAt); // cacheia
             }
           }
+          if (!sincronizada) {
+            ignorada = await isCollectionIgnored(currentPoint.id, mAt);
+          }
         } catch {
           // em caso de falha, mantem a linha (o servidor ainda deduplica no envio)
         }
-        if (sincronizada) {
+        if (sincronizada || ignorada) {
           processedRows.splice(i, 1);
-          jaSincronizadas++;
+          if (sincronizada) jaSincronizadas++;
+          else ignoradas++;
         }
       }
 
       if (processedRows.length === 0) {
-        showAlert(
-          'Tudo sincronizado',
-          `As ${totalMedicoes} medições deste arquivo correspondem a ${visitas.length} coleta(s), ` +
-          'e todas já foram enviadas. Não há nada novo — pode fechar tranquila.'
-        );
+        const base =
+          `As ${totalMedicoes} medições deste arquivo correspondem a ${totalVisitas} coleta(s).`;
+
+        if (ignoradas > 0) {
+          // Nunca dizer "tudo sincronizado" aqui: as ignoradas NAO foram enviadas.
+          alertar(
+            'Nada a enviar',
+            `${base}\n\n` +
+            `${jaSincronizadas} já enviada(s) e ${ignoradas} que você marcou como ignorada(s) ` +
+            'neste aparelho. As ignoradas não foram enviadas.\n\n' +
+            'Quer trazer as ignoradas de volta para poder enviá-las?',
+            [
+              { text: 'Não', style: 'cancel' },
+              {
+                text: 'Trazer de volta',
+                onPress: async () => {
+                  await clearIgnored();
+                  showAlert(
+                    'Pronto',
+                    'As coletas ignoradas voltaram. Toque em "Processar Dados" de novo.'
+                  );
+                },
+              },
+            ]
+          );
+        } else {
+          showAlert(
+            'Tudo sincronizado',
+            `${base} Todas já foram enviadas — não há nada novo.`
+          );
+        }
         setProcessing(false);
         return;
       }
 
       const resumoVisitas = processedRows.map((v: any) => `• ${descreverVisita(v)}`).join('\n');
-      const agrupou = totalMedicoes > visitas.length;
+      const agrupou = totalMedicoes > totalVisitas;
 
       if (jaSincronizadas > 0 || agrupou) {
         const plural = processedRows.length > 1 ? 's' : '';
         const partes: string[] = [];
         if (agrupou) {
           partes.push(
-            `As ${totalMedicoes} medições do arquivo foram agrupadas em ${visitas.length} coleta(s) — ` +
+            `As ${totalMedicoes} medições do arquivo foram agrupadas em ${totalVisitas} coleta(s) — ` +
             `medições feitas com menos de ${JANELA_MINUTOS} min de diferença contam como a mesma ida a campo.`
           );
         }
         if (jaSincronizadas > 0) {
-          partes.push(`${jaSincronizadas} coleta(s) já enviada(s) foram ignoradas.`);
+          partes.push(`${jaSincronizadas} coleta(s) já enviada(s) foram puladas.`);
+        }
+        if (ignoradas > 0) {
+          partes.push(`${ignoradas} coleta(s) que você ignorou não aparecem aqui.`);
         }
         partes.push(
           `${processedRows.length} coleta${plural} pendente${plural}:\n${resumoVisitas}\n\n` +
@@ -559,18 +609,20 @@ export default function XLSXImportScreen() {
     const rotulo = descreverVisita(row as any);
     alertar(
       'Ignorar esta coleta?',
-      `A coleta de ${rotulo} nao sera enviada e deixara de aparecer nas proximas ` +
+      `A coleta de ${rotulo} NAO sera enviada e deixara de aparecer nas proximas ` +
       'importacoes neste aparelho. Use quando nao for possivel lembrar as condicoes ' +
-      'do dia (cor da agua, cheiro, chuva).',
+      'do dia (cor da agua, cheiro, chuva).\n\n' +
+      'Da para trazer de volta depois, pelo Perfil.',
       [
         { text: 'Cancelar', style: 'cancel' },
         {
           text: 'Ignorar',
           style: 'destructive',
           onPress: async () => {
-            await markCollectionSynced(currentPoint.id, row.measuredAt);
+            // Lista de IGNORADAS, nao de sincronizadas: nao foi enviada nada.
+            await markCollectionIgnored(currentPoint.id, row.measuredAt);
             for (const d of (row.descartadas ?? [])) {
-              await markCollectionSynced(currentPoint.id, d);
+              await markCollectionIgnored(currentPoint.id, d);
             }
             const restantes = processedData.filter((_, i) => i !== indice);
             setProcessedData(restantes);

@@ -39,3 +39,56 @@ export async function markCollectionSynced(pointId: number, measuredAt: string):
     // ignorar falha de armazenamento (a trava do servidor ainda protege o banco)
   }
 }
+
+// =====================================================================
+// COLETAS IGNORADAS — separado das sincronizadas, de propósito
+// ---------------------------------------------------------------------
+// "Ignorada" e "já enviada" são coisas diferentes e estavam na mesma lista.
+// Consequência: uma coleta ignorada por engano sumia para sempre naquele
+// aparelho, sem aviso e sem volta, e o app dizia "tudo sincronizado" — o que
+// era falso. Pior tipo de erro: o que se apresenta como sucesso.
+//
+// Com listas separadas, o app consegue dizer "X ignoradas por você" e oferecer
+// restaurar.
+// =====================================================================
+const IGNORED_KEY = 'ignored_collections';
+
+async function readIgnored(): Promise<Set<string>> {
+  try {
+    const raw = await AsyncStorage.getItem(IGNORED_KEY);
+    if (!raw) return new Set();
+    const arr = JSON.parse(raw);
+    return new Set(Array.isArray(arr) ? arr : []);
+  } catch {
+    return new Set();
+  }
+}
+
+export async function isCollectionIgnored(pointId: number, measuredAt: string): Promise<boolean> {
+  const set = await readIgnored();
+  return set.has(makeKey(pointId, measuredAt));
+}
+
+export async function markCollectionIgnored(pointId: number, measuredAt: string): Promise<void> {
+  try {
+    const set = await readIgnored();
+    set.add(makeKey(pointId, measuredAt));
+    await AsyncStorage.setItem(IGNORED_KEY, JSON.stringify([...set]));
+  } catch {
+    /* ignorar falha de armazenamento */
+  }
+}
+
+/** Quantas coletas foram ignoradas neste aparelho. */
+export async function countIgnored(): Promise<number> {
+  return (await readIgnored()).size;
+}
+
+/** Desfaz TODAS as ignorâncias: elas voltam a aparecer na próxima importação. */
+export async function clearIgnored(): Promise<void> {
+  try {
+    await AsyncStorage.removeItem(IGNORED_KEY);
+  } catch {
+    /* ignorar */
+  }
+}
