@@ -1,0 +1,22 @@
+# Gates de qualidade. O GitHub Actions está desligado nesta conta: quem roda estes passos
+# é o Fiscal do Hermes (fiscal-tikatu.py), que lê os `run:` deste arquivo no commit do PR.
+name: quality-gates
+
+on:
+  pull_request:
+    branches: [main]
+
+jobs:
+  gates:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - name: Dependências (npm ci)
+        run: npm ci
+      - name: TypeScript (tsc --noEmit)
+        run: npx tsc --noEmit
+      - name: Build web (expo export + PWA)
+        run: npm run build:web

@@ -344,6 +344,7 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   webScroll: {
+    // @ts-expect-error '100vh' só existe no react-native-web; os tipos do RN não aceitam
     height: '100vh',
     backgroundColor: '#f8fafc',
   },
