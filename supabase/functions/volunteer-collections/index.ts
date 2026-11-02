@@ -10,7 +10,7 @@
 // Agora uma unica chamada responde, para cada visita do arquivo:
 //   enviada  -> ja existe leitura deste ponto a ate 15 min de alguma medicao da visita
 //   ignorada -> o voluntario marcou "Ignorar" (tabela collection_skips)
-//   antiga   -> anterior a ultima coleta enviada deste ponto e nunca enviada
+//   antiga   -> anterior ao ultimo envio proprio neste ponto (reserva pelo ponto se nunca enviou)
 //               (quase sempre teste ou medicao extra; o app pergunta antes de incluir)
 //   nova     -> pendente de verdade
 //
@@ -21,7 +21,7 @@
 //   restaurar { point_id? }            -> desfaz as ignoradas (todas ou de um ponto)
 // =====================================================================
 import { createClient } from 'jsr:@supabase/supabase-js@2';
-import { JANELA_MS, ms, isoValidos, prepararVisitas, classificar } from './status.ts';
+import { JANELA_MS, ms, isoValidos, prepararVisitas, classificar, escolherReferencia } from './status.ts';
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -89,12 +89,23 @@ Deno.serve(async (req: Request) => {
 
       const todos = itens.flatMap((i) => i.horarios);
 
-      // Ultima coleta enviada deste ponto (qualquer origem: voluntario ou sonda automatica).
-      const { data: ultima } = await admin
+      // Ultimo envio proprio neste ponto; sem ele, reserva pelo ponto.
+      const { data: propria, error: propriaError } = await admin
         .from('readings').select('measured_at')
-        .eq('point_id', pointId)
+        .eq('point_id', pointId).eq('volunteer_id', volunteerId)
         .order('measured_at', { ascending: false }).limit(1).maybeSingle();
-      const ultimaMs = ms(ultima?.measured_at ?? null);
+      if (propriaError) throw propriaError;
+      let ultimaDoPonto: string | null = null;
+      if (!propria) {
+        const { data, error } = await admin
+          .from('readings').select('measured_at')
+          .eq('point_id', pointId)
+          .order('measured_at', { ascending: false }).limit(1).maybeSingle();
+        if (error) throw error;
+        ultimaDoPonto = data?.measured_at ?? null;
+      }
+      const ultima = escolherReferencia(propria?.measured_at ?? null, ultimaDoPonto);
+      const ultimaMs = ms(ultima);
 
       let enviadas: number[] = [];
       if (todos.length > 0) {
@@ -131,7 +142,7 @@ Deno.serve(async (req: Request) => {
 
       return json({
         success: true,
-        ultima_enviada: ultima?.measured_at ?? null,
+        ultima_enviada: ultima,
         itens: resultado,
       });
     }

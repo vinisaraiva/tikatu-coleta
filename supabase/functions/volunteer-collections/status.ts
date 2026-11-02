@@ -18,6 +18,11 @@ export function ms(v: unknown): number | null {
   return Number.isFinite(t) ? t : null;
 }
 
+/** Ultimo envio proprio; sem ele, usa a ultima leitura do ponto. */
+export function escolherReferencia(propria: string | null, doPonto: string | null): string | null {
+  return propria ?? doPonto;
+}
+
 export function isoValidos(lista: unknown): string[] {
   if (!Array.isArray(lista)) return [];
   return lista.filter((x) => ms(x) !== null).map((x) => new Date(x as string).toISOString());
@@ -51,7 +56,7 @@ export function prepararVisitas(visitas: VisitaEntrada[]): VisitaPreparada[] {
  * @param visitas    visitas do arquivo (preparadas)
  * @param enviadas   horarios (ms) das leituras ja gravadas deste ponto
  * @param ignoradas  grupos de horarios (ms) das visitas marcadas como ignoradas
- * @param ultimaMs   horario (ms) da ultima leitura gravada deste ponto, ou null
+ * @param ultimaMs   horario (ms) do ultimo envio proprio (reserva pelo ponto), ou null
  */
 export function classificar(
   visitas: VisitaPreparada[],

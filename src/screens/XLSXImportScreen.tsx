@@ -369,7 +369,7 @@ export default function XLSXImportScreen() {
       const ignoradas = sep.ignoradas;
       processedRows = [...sep.novas];
 
-      // Coletas ANTIGAS: anteriores a ultima coleta enviada deste ponto e
+      // Coletas ANTIGAS: anteriores ao ultimo envio proprio (reserva pelo ponto) e
       // nunca enviadas. Quase sempre sao testes ou medicoes extras que ficaram
       // no historico do YINMIK — por isso nao entram sozinhas. Mas tambem nao
       // somem em silencio: o voluntario decide.
