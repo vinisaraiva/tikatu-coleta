@@ -1,32 +1,4 @@
-// =====================================================================
-// Diálogos que funcionam no PWA
-// ---------------------------------------------------------------------
-// PROBLEMA: no react-native-web o `Alert` é literalmente
-//
-//     class Alert { static alert() {} }
-//
-// ou seja, uma função VAZIA. Toda chamada de `Alert.alert(...)` no navegador
-// não faz absolutamente nada — sem erro, sem aviso, sem console. Foi por isso
-// que o botão "Sair" do Dashboard parecia morto: o diálogo de confirmação nunca
-// aparecia, então o `onPress` do "Sair" nunca era executado.
-//
-// Como o Tikatu Coleta é usado principalmente como PWA, qualquer confirmação
-// feita por `Alert.alert` estava silenciosamente sumindo — eram 16 chamadas.
-//
-// SOLUÇÃO: este módulo mantém a MESMA assinatura do `Alert.alert`, para ser
-// uma troca direta, e no navegador usa `window.alert` / `window.confirm`.
-//
-//   import { alertar } from '../services/dialog';
-//   alertar('Sair', 'Tem certeza?', [
-//     { text: 'Cancelar', style: 'cancel' },
-//     { text: 'Sair', style: 'destructive', onPress: () => logout() },
-//   ]);
-//
-// Regra no navegador:
-//   0 ou 1 botão  -> window.alert   e depois dispara o onPress do botão
-//   2 ou mais     -> window.confirm e dispara o onPress do botão escolhido
-// =====================================================================
-
+// Diálogos compartilhados: Modal na web, Alert no aplicativo nativo.
 import { Alert, Platform } from 'react-native';
 
 export interface BotaoDialogo {
@@ -35,48 +7,35 @@ export interface BotaoDialogo {
   style?: 'default' | 'cancel' | 'destructive';
 }
 
-const naWeb = () => Platform.OS === 'web' && typeof window !== 'undefined';
+export interface Dialogo {
+  titulo: string;
+  mensagem?: string;
+  botoes: BotaoDialogo[];
+}
 
-/** Junta título e mensagem no texto único que o navegador sabe mostrar. */
-function texto(titulo: string, mensagem?: string): string {
-  if (!mensagem) return titulo;
-  return `${titulo}\n\n${mensagem}`;
+const fila: Dialogo[] = [];
+const ouvintes = new Set<() => void>();
+const notificar = () => ouvintes.forEach((ouvinte) => ouvinte());
+export const obterDialogo = (): Dialogo | null => fila[0] ?? null;
+export function observarDialogos(ouvinte: () => void): () => void {
+  ouvintes.add(ouvinte);
+  return () => { ouvintes.delete(ouvinte); };
+}
+
+export function escolherBotao(dialogo: Dialogo, botao: BotaoDialogo): void {
+  if (fila[0] !== dialogo || !dialogo.botoes.includes(botao)) return;
+  fila.shift();
+  notificar();
+  botao.onPress?.();
 }
 
 export function alertar(titulo: string, mensagem?: string, botoes?: BotaoDialogo[]): void {
-  if (!naWeb()) {
-    Alert.alert(titulo, mensagem, botoes as any);
+  if (Platform.OS !== 'web') {
+    Alert.alert(titulo, mensagem, botoes);
     return;
   }
-
-  const lista = botoes ?? [];
-
-  // Sem escolha: apenas informa e executa o único callback, se houver.
-  if (lista.length <= 1) {
-    try {
-      window.alert(texto(titulo, mensagem));
-    } catch {
-      /* ignore */
-    }
-    lista[0]?.onPress?.();
-    return;
-  }
-
-  // Com escolha: o "cancelar" é o botão marcado como cancel (ou o primeiro),
-  // e o "confirmar" é o último que não seja o cancelar.
-  const iCancelar = lista.findIndex((b) => b.style === 'cancel');
-  const cancelar = iCancelar >= 0 ? lista[iCancelar] : lista[0];
-  const confirmar = [...lista].reverse().find((b) => b !== cancelar) ?? lista[lista.length - 1];
-
-  let ok = false;
-  try {
-    ok = window.confirm(texto(titulo, mensagem));
-  } catch {
-    ok = false;
-  }
-
-  if (ok) confirmar?.onPress?.();
-  else cancelar?.onPress?.();
+  fila.push({ titulo, mensagem, botoes: botoes?.length ? [...botoes] : [{ text: 'OK' }] });
+  notificar();
 }
 
 /** Açúcar para o caso mais comum: só informar. */
@@ -94,13 +53,7 @@ export function confirmar(titulo: string, mensagem?: string): Promise<boolean> {
   });
 }
 
-/**
- * Pergunta sim/não e devolve a resposta (Promise<boolean>).
- *
- * No navegador o `window.confirm` só mostra "OK" e "Cancelar" — os rótulos
- * dos botões não aparecem. Por isso, na web, a mensagem ganha uma linha final
- * dizendo o que cada um faz; sem ela o voluntário teria que adivinhar.
- */
+/** Pergunta sim/não com os rótulos reais dos botões. */
 export function perguntar(
   titulo: string,
   mensagem: string,
@@ -108,10 +61,7 @@ export function perguntar(
   textoSim: string
 ): Promise<boolean> {
   return new Promise((resolve) => {
-    const msg = naWeb()
-      ? `${mensagem}\n\nOK = ${textoSim}\nCancelar = ${textoNao}`
-      : mensagem;
-    alertar(titulo, msg, [
+    alertar(titulo, mensagem, [
       { text: textoNao, style: 'cancel', onPress: () => resolve(false) },
       { text: textoSim, onPress: () => resolve(true) },
     ]);
