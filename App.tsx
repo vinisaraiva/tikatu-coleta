@@ -19,6 +19,7 @@ import ProfileScreen from './src/screens/ProfileScreen';
 import { AuthProvider, useAuth } from './src/contexts/AuthContext';
 
 // Components
+import DialogHost from './src/components/DialogHost';
 import InstallGate from './src/components/InstallGate';
 
 // Auto-atualizacao do PWA (forca a versao nova sem derrubar o login)
@@ -138,6 +139,7 @@ export default function App() {
     <AuthProvider>
       <AppNavigator />
       <InstallGate />
+      <DialogHost />
       <StatusBar style="auto" />
     </AuthProvider>
   );

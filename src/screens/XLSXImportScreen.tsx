@@ -368,11 +368,27 @@ export default function XLSXImportScreen() {
           `Encontrei ${sep.antigas.length} coleta(s) mais antiga(s) que o seu último envio` +
           (ultima ? ` (${ultima})` : '') + ' e que nunca foram enviadas:\n\n' +
           `${lista}${mais}\n\n` +
+          (sep.novas.length > 0
+            ? `Além disso, há ${sep.novas.length} coleta(s) nova(s), depois do seu último envio, que serão enviadas.\n\n`
+            : '') +
           'Normalmente são testes ou medições extras. Quer enviá-las também?',
           'Não, só as novas',
           'Sim, enviar também'
         );
         if (incluir) processedRows = [...sep.antigas, ...processedRows];
+        else if (sep.novas.length > 0) {
+          const listaNovas = sep.novas.map((v: any) => `• ${descreverVisita(v)}`).join('\n');
+          const enviarNovas = await perguntar(
+            'Coletas novas no arquivo',
+            `${listaNovas}\n\nEnviar só estas ${sep.novas.length} coleta(s) nova(s)?`,
+            'Cancelar',
+            'Enviar só as novas'
+          );
+          if (!enviarNovas) {
+            setProcessing(false);
+            return;
+          }
+        }
       }
 
       if (processedRows.length === 0) {
