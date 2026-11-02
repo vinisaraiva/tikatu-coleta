@@ -47,9 +47,13 @@ if (Platform.OS === 'web' && typeof document !== 'undefined') {
       html, body { background-color: #e2e8f0; height: 100%; }
       #root {
         max-width: 600px;
+        width: 100%;
+        min-height: 0;
+        box-sizing: border-box;
+        overflow: hidden;
         margin: 0 auto;
-        min-height: 100vh;
-        min-height: 100dvh; /* altura visivel: desconta a barra do navegador no iPhone */
+        height: 100vh;
+        height: 100dvh; /* altura visivel: desconta a barra do navegador no iPhone */
         background-color: #f8fafc;
         box-shadow: 0 0 24px rgba(15, 23, 42, 0.08);
         /* respiro para o indicador inferior do iPhone (0 no navegador comum) */
@@ -101,7 +105,11 @@ function AppNavigator() {
 
   return (
     <NavigationContainer key={isAuthenticated ? 'authenticated' : 'unauthenticated'}>
-      <Stack.Navigator screenOptions={{ headerShown: false }}>
+      <Stack.Navigator screenOptions={{
+        headerShown: false,
+        // Limita os flex filhos à área abaixo do header, inclusive no Safari/PWA.
+        ...(Platform.OS === "web" ? { cardStyle: { flex: 1, minHeight: 0, overflow: "hidden" } } : {}),
+      }}>
         {!isAuthenticated ? (
           <Stack.Screen name="Login" component={LoginScreen} />
         ) : (
