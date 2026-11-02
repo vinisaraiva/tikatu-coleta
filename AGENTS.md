@@ -26,7 +26,7 @@ A versão do app tem fonte única no `package.json` (não edite em `app.config.j
 1. Nunca commitar direto na `main`: branch (`feat/…`, `fix/…`, `docs/…`, `chore/…`) → commits pequenos → PR.
 2. Nunca reescrever histórico publicado (sem force push, rebase ou amend de commits enviados).
 3. Nunca fazer merge do próprio PR. Quem faz merge é o Vinícius ou o auto-merge do Hermes
-   (`automerge-tikatu.py`, sem LLM), e só quando **tudo** abaixo vale:
+   (`automerge-apps.py`, sem LLM), e só quando **tudo** abaixo vale:
    - branch `hermes/*`, base `main`, sem rótulo `segurar`, sem conflito e não é rascunho;
    - comentário de revisão "Revisão: Marina … aprovada" (ou "Revisão: autorrevisão … aprovada");
    - o Fiscal deu ✅ no commit atual (gates de `.github/workflows/quality-gates.yml`);

@@ -1,5 +1,5 @@
 # Gates de qualidade. O GitHub Actions está desligado nesta conta: quem roda estes passos
-# é o Fiscal do Hermes (fiscal-tikatu.py), que lê os `run:` deste arquivo no commit do PR.
+# é o Fiscal do Hermes (fiscal-apps.py), que lê os `run:` deste arquivo no commit do PR.
 name: quality-gates
 
 on:
