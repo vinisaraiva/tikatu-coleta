@@ -1,5 +1,5 @@
 // deno test supabase/functions/volunteer-collections/status.test.ts
-import { classificar, prepararVisitas, perto, JANELA_MS } from './status.ts';
+import { classificar, prepararVisitas, perto, JANELA_MS, escolherReferencia } from './status.ts';
 
 function eq(a: unknown, b: unknown, msg: string) {
   const sa = JSON.stringify(a), sb = JSON.stringify(b);
@@ -57,4 +57,25 @@ Deno.test('mais de 15 min antes da ultima e antiga; depois da ultima e nova', ()
 Deno.test('janela de 15 min inclusiva', () => {
   eq(perto([0], [JANELA_MS]), true, '15 min');
   eq(perto([0], [JANELA_MS + 1]), false, '15 min + 1 ms');
+});
+
+Deno.test('referencia prioriza envio proprio mesmo com outro mais recente', () => {
+  const propria = '2026-11-01T08:00:00Z';
+  const outro = '2026-11-01T09:51:00Z';
+  const referencia = escolherReferencia(propria, outro);
+  eq(referencia, propria, 'envio proprio');
+  const visitas = prepararVisitas([{ measured_at: '2026-11-01T09:00:00Z' }, { measured_at: outro }]);
+  eq(classificar(visitas, [t(outro)], [], t(referencia!)).map((x) => x.status), ['nova', 'enviada'], 'deduplicacao por ponto preservada');
+});
+
+Deno.test('sem envio proprio usa ultima leitura do ponto', () => {
+  const ponto = '2026-11-01T09:51:00Z';
+  eq(escolherReferencia(null, ponto), ponto, 'reserva pelo ponto');
+  eq(classificar(prepararVisitas([{ measured_at: '2026-10-01T00:00:00Z' }]), [], [], t(escolherReferencia(null, ponto)!))[0].status, 'antiga', 'historico da sonda');
+});
+
+Deno.test('sem historico proprio nem do ponto referencia e null', () => {
+  const referencia = escolherReferencia(null, null);
+  eq(referencia, null, 'sem referencia');
+  eq(classificar(prepararVisitas([{ measured_at: '2026-10-01T00:00:00Z' }]), [], [], referencia)[0].status, 'nova', 'sem historico');
 });
