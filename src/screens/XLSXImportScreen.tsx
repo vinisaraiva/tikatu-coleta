@@ -1,8 +1,8 @@
-import React, { useState } from 'react';
+import React, { useState, useRef, useCallback } from 'react';
 import { View, Text, TouchableOpacity, StyleSheet, ScrollView, ActivityIndicator, KeyboardAvoidingView } from 'react-native';
 import { alertar, perguntar } from '../services/dialog';
 import { Platform } from 'react-native';
-import { useNavigation } from '@react-navigation/native';
+import { useNavigation, useFocusEffect } from '@react-navigation/native';
 import * as DocumentPicker from 'expo-document-picker';
 import * as FileSystem from 'expo-file-system';
 import * as XLSX from 'xlsx';
@@ -74,7 +74,23 @@ export default function XLSXImportScreen() {
   const [readyToSync, setReadyToSync] = useState(false);
   const [webToast, setWebToast] = useState<{ visible: boolean; text: string }>({ visible: false, text: '' });
 
-  const isWeb = Platform.OS === 'web';
+  const isWeb = Platform.OS === "web";
+  const webScrollRef = useRef<ScrollView>(null);
+  const revealSync = useCallback(() => {
+    if (isWeb && readyToSync) webScrollRef.current?.scrollToEnd({ animated: false });
+  }, [isWeb, readyToSync]);
+
+  // A tela volta dos fatores ainda durante a transição do Stack.
+  // Repetir ao fim da transição e no layout evita medir a tela oculta.
+  useFocusEffect(useCallback(() => {
+    if (!isWeb || !readyToSync) return;
+    const frame = requestAnimationFrame(revealSync);
+    const unsubscribe = navigation.addListener("transitionEnd" as any, revealSync);
+    return () => {
+      cancelAnimationFrame(frame);
+      unsubscribe();
+    };
+  }, [isWeb, readyToSync, navigation, revealSync]));
 
   const showWebToast = (text: string) => {
     if (!isWeb) return;
@@ -583,7 +599,7 @@ export default function XLSXImportScreen() {
             console.log('Todas as linhas processadas, pronto para sincronizar');
             setReadyToSync(true);
             if (isWeb) {
-              try { window.alert('Processamento Concluído\n\nTodos os fatores ambientais foram respondidos. Agora você pode sincronizar os dados.'); } catch {}
+              alertar('Processamento Concluído', 'Todos os fatores ambientais foram respondidos. Agora você pode sincronizar os dados.');
             } else {
               alertar(
                 'Processamento Concluído',
@@ -868,6 +884,9 @@ export default function XLSXImportScreen() {
     return (
       <View style={styles.webRoot}>
       <ScrollView 
+        ref={webScrollRef}
+        onContentSizeChange={revealSync}
+        onLayout={revealSync}
         style={styles.webScroll} 
         contentContainerStyle={styles.scrollContent} 
         keyboardShouldPersistTaps="handled"
@@ -1176,6 +1195,7 @@ const styles = StyleSheet.create({
   },
   webScroll: {
     flex: 1,
+    minHeight: 0,
     backgroundColor: '#f8fafc',
     width: '100%',
   },
@@ -1183,7 +1203,7 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: '#f8fafc',
     width: '100%',
-    height: '100%',
+    minHeight: 0,
   },
   webToast: {
     position: 'absolute',
