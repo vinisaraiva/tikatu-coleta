@@ -18,6 +18,8 @@ export interface ReadingData {
     parameter_id: number;
     value: number;
   }>;
+  /** Versao e plataforma do app que enviou (gravadas em readings.context). */
+  app?: { version: string; platform: string };
 }
 
 export class CollectionService {

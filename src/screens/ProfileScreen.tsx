@@ -7,7 +7,7 @@ import { usePwaInstall } from '../services/pwaInstall';
 import InstallScreen from './InstallScreen';
 import NotificationCard from '../components/NotificationCard';
 import { alertar } from '../services/dialog';
-import { countIgnored, clearIgnored } from '../services/syncedCollections';
+import { contarIgnoradas, restaurarIgnoradas } from '../services/collectionStatus';
 import { useFocusEffect } from '@react-navigation/native';
 
 export default function ProfileScreen() {
@@ -18,15 +18,20 @@ export default function ProfileScreen() {
 
   // Coletas que o voluntario marcou como "Ignorar" na tela de importacao.
   // Sem um lugar para ver e desfazer isso, um toque por engano escondia a
-  // coleta para sempre naquele aparelho — e o app ainda dizia "tudo
-  // sincronizado", o que era falso.
+  // coleta para sempre — e o app ainda dizia "tudo sincronizado", o que era
+  // falso. A lista fica no SERVIDOR (vale em qualquer aparelho); sem internet
+  // o cartao simplesmente nao aparece.
   const [ignoradas, setIgnoradas] = useState(0);
   useFocusEffect(
     useCallback(() => {
       let vivo = true;
-      countIgnored().then((n) => {
-        if (vivo) setIgnoradas(n);
-      });
+      contarIgnoradas()
+        .then((n) => {
+          if (vivo) setIgnoradas(n);
+        })
+        .catch(() => {
+          if (vivo) setIgnoradas(0);
+        });
       return () => {
         vivo = false;
       };
@@ -36,15 +41,19 @@ export default function ProfileScreen() {
   const restaurarIgnoradas = () => {
     alertar(
       'Trazer coletas de volta',
-      `${ignoradas} medição(ões) foram marcadas como ignoradas neste aparelho e não ` +
+      `${ignoradas} coleta(s) foram marcadas como ignoradas e não ` +
       'foram enviadas. Quer que voltem a aparecer na próxima importação do arquivo?',
       [
         { text: 'Cancelar', style: 'cancel' },
         {
           text: 'Trazer de volta',
           onPress: async () => {
-            await clearIgnored();
-            setIgnoradas(0);
+            try {
+              await restaurarIgnoradas();
+              setIgnoradas(0);
+            } catch {
+              alertar('Sem conexão', 'Não consegui falar com o servidor. Tente de novo com internet.');
+            }
           },
         },
       ]
@@ -126,7 +135,7 @@ export default function ProfileScreen() {
           <Ionicons name="archive-outline" size={20} color="#9a3412" />
           <View style={styles.installTextBox}>
             <Text style={styles.ignoradasTitle}>
-              {ignoradas} medição(ões) ignorada(s)
+              {ignoradas} coleta(s) ignorada(s)
             </Text>
             <Text style={styles.installSubtitle}>
               Não foram enviadas. Toque para trazê-las de volta.

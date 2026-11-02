@@ -93,3 +93,27 @@ export function confirmar(titulo: string, mensagem?: string): Promise<boolean> {
     ]);
   });
 }
+
+/**
+ * Pergunta sim/não e devolve a resposta (Promise<boolean>).
+ *
+ * No navegador o `window.confirm` só mostra "OK" e "Cancelar" — os rótulos
+ * dos botões não aparecem. Por isso, na web, a mensagem ganha uma linha final
+ * dizendo o que cada um faz; sem ela o voluntário teria que adivinhar.
+ */
+export function perguntar(
+  titulo: string,
+  mensagem: string,
+  textoNao: string,
+  textoSim: string
+): Promise<boolean> {
+  return new Promise((resolve) => {
+    const msg = naWeb()
+      ? `${mensagem}\n\nOK = ${textoSim}\nCancelar = ${textoNao}`
+      : mensagem;
+    alertar(titulo, msg, [
+      { text: textoNao, style: 'cancel', onPress: () => resolve(false) },
+      { text: textoSim, onPress: () => resolve(true) },
+    ]);
+  });
+}
