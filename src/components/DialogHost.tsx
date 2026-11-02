@@ -21,7 +21,10 @@ export default function DialogHost() {
             {dialogo.botoes.map((botao, indice) => (
               <Pressable key={indice} accessibilityRole="button"
                 onPress={() => escolherBotao(dialogo, botao)}
-                style={({ pressed }) => [styles.botao, pressed && styles.pressionado]}>
+                style={({ pressed }) => [styles.botao,
+                  botao.style === 'cancel' && styles.botaoCancelar,
+                  botao.style === 'destructive' && styles.botaoDestrutivo,
+                  pressed && styles.pressionado]}>
                 <Text style={[styles.rotulo,
                   botao.style === 'cancel' && styles.cancelar,
                   botao.style === 'destructive' && styles.destrutivo]}>{botao.text}</Text>
@@ -40,10 +43,12 @@ const styles = StyleSheet.create({
   titulo: { fontSize: 20, fontWeight: '700', color: '#1e293b', marginBottom: 16 },
   mensagem: { flexShrink: 1 },
   texto: { fontSize: 16, lineHeight: 24, color: '#334155' },
-  botoes: { marginTop: 16, gap: 8 },
-  botao: { minHeight: 48, padding: 12, justifyContent: 'center', alignItems: 'center', borderRadius: 8 },
-  pressionado: { backgroundColor: '#f1f5f9' },
-  rotulo: { fontSize: 16, fontWeight: '600', color: '#0066CC', textAlign: 'center' },
-  cancelar: { color: '#64748b', fontWeight: '400' },
-  destrutivo: { color: '#b91c1c' },
+  botoes: { marginTop: 16, gap: 10 },
+  botao: { minHeight: 48, padding: 12, justifyContent: 'center', alignItems: 'center', borderRadius: 10, backgroundColor: '#0066CC' },
+  botaoCancelar: { backgroundColor: '#ffffff', borderWidth: 1.5, borderColor: '#94a3b8' },
+  botaoDestrutivo: { backgroundColor: '#b91c1c' },
+  pressionado: { opacity: 0.85 },
+  rotulo: { fontSize: 16, fontWeight: '700', color: '#ffffff', textAlign: 'center' },
+  cancelar: { color: '#334155', fontWeight: '600' },
+  destrutivo: { color: '#ffffff' },
 });
