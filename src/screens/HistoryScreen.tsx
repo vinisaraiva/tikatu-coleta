@@ -15,7 +15,8 @@ export default function HistoryScreen() {
   }, [selectedPointId, volunteer]);
 
   const fetchReadings = async () => {
-    if (!currentPoint?.id) {
+    if (!currentPoint?.id || !volunteer?.id) {
+      setReadings([]);
       setLoading(false);
       return;
     }
@@ -32,6 +33,7 @@ export default function HistoryScreen() {
           )
         `)
         .eq('point_id', currentPoint.id)
+        .eq('volunteer_id', volunteer.id)
         .order('measured_at', { ascending: false })
         .limit(50);
 
@@ -73,7 +75,7 @@ export default function HistoryScreen() {
         </View>
       ) : readings.length === 0 ? (
         <View style={styles.emptyContainer}>
-          <Text style={styles.emptyText}>Nenhuma coleta encontrada para este ponto</Text>
+          <Text style={styles.emptyText}>Você ainda não enviou coletas neste ponto</Text>
         </View>
       ) : (
         <View style={styles.readingsContainer}>
