@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useCallback, useState } from 'react';
 import { View, Text, StyleSheet, ScrollView, TouchableOpacity } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useAuth, getCurrentPoint } from '../contexts/AuthContext';
@@ -6,12 +6,59 @@ import { APP_VERSION } from '../services/appUpdate';
 import { usePwaInstall } from '../services/pwaInstall';
 import InstallScreen from './InstallScreen';
 import NotificationCard from '../components/NotificationCard';
+import { alertar } from '../services/dialog';
+import { contarIgnoradas, restaurarIgnoradas } from '../services/collectionStatus';
+import { useFocusEffect } from '@react-navigation/native';
 
 export default function ProfileScreen() {
   const { volunteer, selectedPointId } = useAuth();
   const currentPoint = getCurrentPoint(volunteer, selectedPointId);
   const { naWeb, instalado, navegador, promptDisponivel, instalar } = usePwaInstall();
   const [mostrarInstalacao, setMostrarInstalacao] = useState(false);
+
+  // Coletas que o voluntario marcou como "Ignorar" na tela de importacao.
+  // Sem um lugar para ver e desfazer isso, um toque por engano escondia a
+  // coleta para sempre — e o app ainda dizia "tudo sincronizado", o que era
+  // falso. A lista fica no SERVIDOR (vale em qualquer aparelho); sem internet
+  // o cartao simplesmente nao aparece.
+  const [ignoradas, setIgnoradas] = useState(0);
+  useFocusEffect(
+    useCallback(() => {
+      let vivo = true;
+      contarIgnoradas()
+        .then((n) => {
+          if (vivo) setIgnoradas(n);
+        })
+        .catch(() => {
+          if (vivo) setIgnoradas(0);
+        });
+      return () => {
+        vivo = false;
+      };
+    }, [])
+  );
+
+  const restaurarIgnoradas = () => {
+    alertar(
+      'Trazer coletas de volta',
+      `${ignoradas} coleta(s) foram marcadas como ignoradas e não ` +
+      'foram enviadas. Quer que voltem a aparecer na próxima importação do arquivo?',
+      [
+        { text: 'Cancelar', style: 'cancel' },
+        {
+          text: 'Trazer de volta',
+          onPress: async () => {
+            try {
+              await restaurarIgnoradas();
+              setIgnoradas(0);
+            } catch {
+              alertar('Sem conexão', 'Não consegui falar com o servidor. Tente de novo com internet.');
+            }
+          },
+        },
+      ]
+    );
+  };
 
   if (mostrarInstalacao) {
     return (
@@ -77,6 +124,25 @@ export default function ProfileScreen() {
         <View style={styles.notificacaoBox}>
           <NotificationCard compacto />
         </View>
+      )}
+
+      {ignoradas > 0 && (
+        <TouchableOpacity
+          style={styles.ignoradasRow}
+          onPress={restaurarIgnoradas}
+          accessibilityRole="button"
+        >
+          <Ionicons name="archive-outline" size={20} color="#9a3412" />
+          <View style={styles.installTextBox}>
+            <Text style={styles.ignoradasTitle}>
+              {ignoradas} coleta(s) ignorada(s)
+            </Text>
+            <Text style={styles.installSubtitle}>
+              Não foram enviadas. Toque para trazê-las de volta.
+            </Text>
+          </View>
+          <Ionicons name="chevron-forward" size={18} color="#9a3412" />
+        </TouchableOpacity>
       )}
 
       {/* Instalação do app — só faz sentido na web e se ainda não estiver instalado */}
@@ -198,6 +264,18 @@ const styles = StyleSheet.create({
     color: '#64748b',
   },
   notificacaoBox: { marginTop: 16 },
+  ignoradasRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
+    backgroundColor: '#fff7ed',
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: '#fed7aa',
+    padding: 16,
+    marginTop: 16,
+  },
+  ignoradasTitle: { fontSize: 15, fontWeight: '600', color: '#9a3412', marginBottom: 2 },
   installRow: {
     flexDirection: 'row',
     alignItems: 'center',

@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { View, Text, TouchableOpacity, StyleSheet, ScrollView, ActivityIndicator, KeyboardAvoidingView } from 'react-native';
-import { alertar } from '../services/dialog';
+import { alertar, perguntar } from '../services/dialog';
 import { Platform } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
 import * as DocumentPicker from 'expo-document-picker';
@@ -10,8 +10,16 @@ import { useAuth, getCurrentPoint } from '../contexts/AuthContext';
 import PointSelector from '../components/PointSelector';
 import { CollectionService } from '../services/collectionService';
 import { uploadVolunteerFile } from '../services/uploadService';
-import { isCollectionSynced, markCollectionSynced } from '../services/syncedCollections';
+import {
+  consultarStatus,
+  separarPorStatus,
+  ignorarNoServidor,
+  restaurarIgnoradas,
+  SemConexaoError,
+} from '../services/collectionStatus';
+import { APP_VERSION } from '../services/appUpdate';
 import { agruparPorVisita, descreverVisita, JANELA_MINUTOS } from '../services/collectionGrouping';
+import { fatoresParaLinhasDoArquivo } from '../services/xlsxFactors';
 
 interface XLSXRow {
   ID: string;
@@ -306,62 +314,126 @@ export default function XLSXImportScreen() {
       // mas tambem nao sao coletas distintas. Sem agrupar, o app pedia o
       // questionario de fatores ambientais uma vez por linha.
       const totalMedicoes = processedRows.length;
+      // COPIA, nao a mesma referencia: o filtro abaixo usa splice, e apontar
+      // `processedRows` para o mesmo array de `visitas` esvaziava os dois —
+      // fazendo a mensagem dizer "0 coleta(s)" quando havia coletas.
       const visitas = agruparPorVisita(processedRows, JANELA_MINUTOS);
-      processedRows = visitas;
+      const totalVisitas = visitas.length;
+      processedRows = [...visitas];
 
-      // Pular visitas ja enviadas. A checagem e' por JANELA, nao por horario
-      // exato: as medicoes descartadas do grupo continuam no arquivo e
-      // voltariam a aparecer como novas se comparassemos so a igualdade.
-      let jaSincronizadas = 0;
-      for (let i = processedRows.length - 1; i >= 0; i--) {
-        const mAt = processedRows[i].measuredAt;
-        let sincronizada = false;
-        try {
-          // 1. memoria local (rapida, funciona offline)
-          sincronizada = await isCollectionSynced(currentPoint.id, mAt);
-          // 2. se nao achou local, confirma no banco (cobre outro aparelho,
-          //    navegador limpo, e as medicoes descartadas do mesmo grupo)
-          if (!sincronizada) {
-            sincronizada = await CollectionService.existsReadingNearby(
-              currentPoint.id, mAt, JANELA_MINUTOS
-            );
-            if (sincronizada) {
-              await markCollectionSynced(currentPoint.id, mAt); // cacheia
-            }
-          }
-        } catch {
-          // em caso de falha, mantem a linha (o servidor ainda deduplica no envio)
+      // -----------------------------------------------------------------
+      // O QUE JA FOI ENVIADO? Quem responde e' o SERVIDOR.
+      // -----------------------------------------------------------------
+      // O arquivo do YINMIK traz todo o historico a cada exportacao. Ate a
+      // v1.5.0 o app decidia isso com a memoria do aparelho (que o iPhone
+      // apaga) e, se a consulta ao banco falhasse, tratava a coleta como NAO
+      // enviada — por isso coletas antigas voltavam como pendentes.
+      //
+      // Agora: uma consulta so, e sem resposta do servidor o app NAO adivinha.
+      let status;
+      try {
+        status = await consultarStatus(currentPoint.id, visitas);
+      } catch (e: any) {
+        if (e instanceof SemConexaoError) {
+          showAlert(
+            'Sem conexão',
+            'Não consegui verificar quais coletas já foram enviadas.\n\n' +
+            'Conecte-se à internet (Wi-Fi ou dados) e toque em "Processar Dados" de novo. ' +
+            'Nenhuma coleta foi perdida.'
+          );
+        } else {
+          showAlert('Erro', String(e?.message || 'Não foi possível verificar as coletas.'));
         }
-        if (sincronizada) {
-          processedRows.splice(i, 1);
-          jaSincronizadas++;
-        }
+        setProcessing(false);
+        return;
+      }
+
+      const sep = separarPorStatus(visitas, status.porHorario);
+      const jaSincronizadas = sep.enviadas;
+      const ignoradas = sep.ignoradas;
+      processedRows = [...sep.novas];
+
+      // Coletas ANTIGAS: anteriores a ultima coleta enviada deste ponto e
+      // nunca enviadas. Quase sempre sao testes ou medicoes extras que ficaram
+      // no historico do YINMIK — por isso nao entram sozinhas. Mas tambem nao
+      // somem em silencio: o voluntario decide.
+      if (sep.antigas.length > 0) {
+        const ultima = status.ultimaEnviada
+          ? new Date(status.ultimaEnviada).toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit' })
+          : '';
+        const lista = sep.antigas.slice(0, 8).map((v: any) => `• ${descreverVisita(v)}`).join('\n');
+        const mais = sep.antigas.length > 8 ? `\n… e mais ${sep.antigas.length - 8}` : '';
+        const incluir = await perguntar(
+          'Coletas antigas no arquivo',
+          `Encontrei ${sep.antigas.length} coleta(s) mais antiga(s) que o seu último envio` +
+          (ultima ? ` (${ultima})` : '') + ' e que nunca foram enviadas:\n\n' +
+          `${lista}${mais}\n\n` +
+          'Normalmente são testes ou medições extras. Quer enviá-las também?',
+          'Não, só as novas',
+          'Sim, enviar também'
+        );
+        if (incluir) processedRows = [...sep.antigas, ...processedRows];
       }
 
       if (processedRows.length === 0) {
-        showAlert(
-          'Tudo sincronizado',
-          `As ${totalMedicoes} medições deste arquivo correspondem a ${visitas.length} coleta(s), ` +
-          'e todas já foram enviadas. Não há nada novo — pode fechar tranquila.'
-        );
+        const base =
+          `As ${totalMedicoes} medições deste arquivo correspondem a ${totalVisitas} coleta(s).`;
+
+        if (ignoradas > 0) {
+          // Nunca dizer "tudo sincronizado" aqui: as ignoradas NAO foram enviadas.
+          alertar(
+            'Nada a enviar',
+            `${base}\n\n` +
+            `${jaSincronizadas} já enviada(s) e ${ignoradas} que você marcou como ignorada(s). ` +
+            'As ignoradas não foram enviadas.\n\n' +
+            'Quer trazer as ignoradas de volta para poder enviá-las?',
+            [
+              { text: 'Não', style: 'cancel' },
+              {
+                text: 'Trazer de volta',
+                onPress: async () => {
+                  try {
+                    await restaurarIgnoradas(currentPoint.id);
+                    showAlert(
+                      'Pronto',
+                      'As coletas ignoradas voltaram. Toque em "Processar Dados" de novo.'
+                    );
+                  } catch {
+                    showAlert('Sem conexão', 'Não consegui falar com o servidor. Tente de novo com internet.');
+                  }
+                },
+              },
+            ]
+          );
+        } else if (sep.antigas.length > 0) {
+          showAlert('Nada a enviar', `${base} Nenhuma coleta nova desde o seu último envio.`);
+        } else {
+          showAlert(
+            'Tudo sincronizado',
+            `${base} Todas já foram enviadas — não há nada novo.`
+          );
+        }
         setProcessing(false);
         return;
       }
 
       const resumoVisitas = processedRows.map((v: any) => `• ${descreverVisita(v)}`).join('\n');
-      const agrupou = totalMedicoes > visitas.length;
+      const agrupou = totalMedicoes > totalVisitas;
 
-      if (jaSincronizadas > 0 || agrupou) {
+      if (jaSincronizadas > 0 || ignoradas > 0 || agrupou) {
         const plural = processedRows.length > 1 ? 's' : '';
         const partes: string[] = [];
         if (agrupou) {
           partes.push(
-            `As ${totalMedicoes} medições do arquivo foram agrupadas em ${visitas.length} coleta(s) — ` +
+            `As ${totalMedicoes} medições do arquivo foram agrupadas em ${totalVisitas} coleta(s) — ` +
             `medições feitas com menos de ${JANELA_MINUTOS} min de diferença contam como a mesma ida a campo.`
           );
         }
         if (jaSincronizadas > 0) {
-          partes.push(`${jaSincronizadas} coleta(s) já enviada(s) foram ignoradas.`);
+          partes.push(`${jaSincronizadas} coleta(s) já enviada(s) foram puladas.`);
+        }
+        if (ignoradas > 0) {
+          partes.push(`${ignoradas} coleta(s) que você ignorou não aparecem aqui (dá para trazer de volta pelo Perfil).`);
         }
         partes.push(
           `${processedRows.length} coleta${plural} pendente${plural}:\n${resumoVisitas}\n\n` +
@@ -544,10 +616,12 @@ export default function XLSXImportScreen() {
    * como as medicoes continuam no arquivo da sonda, ela reapareceria a cada
    * importacao — travando o voluntario indefinidamente.
    *
-   * A coleta ignorada e' marcada localmente como resolvida, incluindo as
-   * medicoes descartadas do mesmo grupo, para nao voltar. Nada e' gravado no
-   * banco: a coleta simplesmente nao existe, em vez de existir com fatores
-   * ambientais inventados.
+   * A marca de "ignorada" fica no SERVIDOR (tabela collection_skips), junto
+   * com as medicoes descartadas do mesmo grupo, para nao voltar em nenhum
+   * aparelho. Ate a v1.5.0 ela ficava so na memoria do celular, que o iPhone
+   * apaga — e tudo o que tinha sido ignorado reaparecia como pendente.
+   * Nenhuma leitura e' gravada: a coleta simplesmente nao existe, em vez de
+   * existir com fatores ambientais inventados.
    */
   const ignorarColeta = async (indice: number) => {
     const row = processedData[indice];
@@ -559,18 +633,24 @@ export default function XLSXImportScreen() {
     const rotulo = descreverVisita(row as any);
     alertar(
       'Ignorar esta coleta?',
-      `A coleta de ${rotulo} nao sera enviada e deixara de aparecer nas proximas ` +
-      'importacoes neste aparelho. Use quando nao for possivel lembrar as condicoes ' +
-      'do dia (cor da agua, cheiro, chuva).',
+      `A coleta de ${rotulo} NÃO será enviada e deixará de aparecer nas próximas ` +
+      'importações. Use quando não for possível lembrar as condições ' +
+      'do dia (cor da água, cheiro, chuva).\n\n' +
+      'Dá para trazer de volta depois, pelo Perfil.',
       [
         { text: 'Cancelar', style: 'cancel' },
         {
           text: 'Ignorar',
           style: 'destructive',
           onPress: async () => {
-            await markCollectionSynced(currentPoint.id, row.measuredAt);
-            for (const d of (row.descartadas ?? [])) {
-              await markCollectionSynced(currentPoint.id, d);
+            try {
+              await ignorarNoServidor(currentPoint.id, row.measuredAt, row.descartadas ?? []);
+            } catch {
+              showAlert(
+                'Sem conexão',
+                'Não consegui registrar. Conecte-se à internet e tente ignorar de novo.'
+              );
+              return;
             }
             const restantes = processedData.filter((_, i) => i !== indice);
             setProcessedData(restantes);
@@ -631,16 +711,14 @@ export default function XLSXImportScreen() {
             janela_agrupamento_min: JANELA_MINUTOS,
           },
           parameters: row.parameters,
+          // Qual versao enviou: ajuda a investigar problemas de atualizacao.
+          app: { version: APP_VERSION, platform: Platform.OS },
         };
 
         console.log(`Inserindo reading ${i + 1}/${processedData.length} com dados:`, readingData);
+        // Nao ha mais registro local de "ja enviada": o servidor e' a fonte da
+        // verdade (volunteer-collections) e recusa duplicatas por janela.
         await CollectionService.insertReading(readingData);
-        // Registrar localmente a visita inteira: a representante E as medicoes
-        // descartadas. Sem isso, as descartadas voltariam como coleta nova.
-        await markCollectionSynced(currentPoint.id, row.measuredAt);
-        for (const descartada of (row.descartadas ?? [])) {
-          await markCollectionSynced(currentPoint.id, descartada);
-        }
       }
 
       // Modificar o arquivo XLSX original com todos os fatores ambientais
@@ -668,22 +746,14 @@ export default function XLSXImportScreen() {
       const originalData = XLSX.utils.sheet_to_json(worksheet);
       console.log('Dados originais:', originalData.length, 'linhas');
       
-      // Adicionar fatores ambientais ao arquivo (cada linha com seus próprios fatores)
-      const modifiedData = originalData.map((row: any, index: number) => {
-        const processedRow = processedData[index];
-        if (processedRow && processedRow.environmentalFactors) {
-          return {
-            ...row,
-            'Cor_Alterada': processedRow.environmentalFactors.cor_alterada ? 'Sim' : 'Não',
-            'Cheiro_Alterado': processedRow.environmentalFactors.cheiro_alterado ? 'Sim' : 'Não',
-            'Chuva_48h': processedRow.environmentalFactors.chuva_48h ? 'Sim' : 'Não',
-            'Residuos_Visiveis': processedRow.environmentalFactors.residuos_visiveis ? 'Sim' : 'Não',
-            'Volume_Reduzido': processedRow.environmentalFactors.volume_reduzido ? 'Sim' : 'Não',
-            'Observacoes': processedRow.environmentalFactors.observacoes || '',
-          };
-        }
-        return row;
-      });
+      // Respostas do questionario em cada linha do arquivo, casadas pelo
+      // HORARIO da medicao (antes era pela posicao, e depois do agrupamento as
+      // respostas caiam em linhas de outros dias). Ver src/services/xlsxFactors.ts.
+      const modifiedData = fatoresParaLinhasDoArquivo(
+        originalData as any[],
+        processedData,
+        (linha: any) => (linha?.Date ? sondaDateToUtcIso(String(linha.Date)) : null)
+      );
 
       console.log('Dados modificados:', modifiedData.length, 'linhas');
 
