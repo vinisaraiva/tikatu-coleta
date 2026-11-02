@@ -25,7 +25,16 @@ A versão do app tem fonte única no `package.json` (não edite em `app.config.j
 
 1. Nunca commitar direto na `main`: branch (`feat/…`, `fix/…`, `docs/…`, `chore/…`) → commits pequenos → PR.
 2. Nunca reescrever histórico publicado (sem force push, rebase ou amend de commits enviados).
-3. Nunca fazer merge do próprio PR.
+3. Nunca fazer merge do próprio PR. Quem faz merge é o Vinícius ou o auto-merge do Hermes
+   (`automerge-apps.py`, sem LLM), e só quando **tudo** abaixo vale:
+   - branch `hermes/*`, base `main`, sem rótulo `segurar`, sem conflito e não é rascunho;
+   - comentário de revisão "Revisão: Marina … aprovada" (ou "Revisão: autorrevisão … aprovada");
+   - o Fiscal deu ✅ no commit atual (gates de `.github/workflows/quality-gates.yml`);
+   - o PR não toca `supabase/`, login (`src/contexts/AuthContext.tsx`, `src/services/supabase.ts`),
+     deploy e PWA (`render.yaml`, `app.config.js`, `scripts/prepare-web.js`), `.github/` nem este arquivo —
+     esses esperam o merge do Vinícius;
+   - entre 7h e 22h (Bahia). Depois do merge ele confere se o Render publicou; se o site falhar,
+     pausa o auto-merge, reverte e avisa no Telegram.
 4. Uma tarefa por branch/PR; sem refatorações não pedidas junto da entrega.
 5. Siga o estilo do código ao redor (português nos comentários e textos de interface).
 6. Mensagens de commit: `tipo(escopo): resumo` (ex.: `fix(xlsx): …`, `feat: …`).
